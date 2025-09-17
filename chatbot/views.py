@@ -110,10 +110,10 @@ def chat_api(request, website_id):
             logger.error(f"Error sending notifications: {e}")
         
         # Return manual response
-        response_message = "Thank you for your message. A support agent will respond to you shortly."
+        # response_message = "Thank you for your message. A support agent will respond to you shortly."
         
         return JsonResponse({
-            'response': response_message,
+            # 'response': response_message,
             'conversationId': str(conversation.id),
             'timestamp': timezone.now().isoformat(),
             'is_manual': False
@@ -281,7 +281,7 @@ def send_manual_response(request):
             conversation=conversation,
             role='assistant',
             content=message_content,
-            is_manual_response=True
+            # is_manual_response=True
         )
         
         # Update conversation
@@ -291,17 +291,17 @@ def send_manual_response(request):
         
         # Send via WebSocket to visitor
         channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f'chat_{conversation_id}',
-            {
-                'type': 'chat_message_from_dashboard',
-                'message': message_content,
-                'role': 'assistant',
-                'conversation_id': conversation_id,
-                'timestamp': message.timestamp.isoformat(),
-                'agent_id': request.user.id
-            }
-        )
+        # async_to_sync(channel_layer.group_send)(
+        #     f'chat_{conversation_id}',
+        #     {
+        #         'type': 'chat_message_from_dashboard',
+        #         'message': message_content,
+        #         'role': 'assistant',
+        #         'conversation_id': conversation_id,
+        #         'timestamp': message.timestamp.isoformat(),
+        #         'agent_id': request.user.id
+        #     }
+        # )
         
         # Notify other dashboard users
         async_to_sync(channel_layer.group_send)(
@@ -312,13 +312,13 @@ def send_manual_response(request):
                     'id': str(message.id),
                     'content': message_content,
                     'role': 'assistant',
-                    'conversation_id': conversation_id,
+                    'conversation_id': str(conversation.id),
                     'timestamp': message.timestamp.isoformat(),
                     'is_manual': True,
                     'agent_id': request.user.id
                 },
-                'conversation_id': conversation_id,
-                'website_id': conversation.website.id
+                'conversation_id': str(conversation.id),
+                'website_id': str(conversation.website.id)
             }
         )
         

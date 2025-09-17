@@ -7,6 +7,7 @@
     theme: 'green',
     position: 'bottom-right',
     botName: 'AI Assistant',
+    websiteId: null, // Must be provided
     welcomeMessage: "Hi! I'm your AI assistant. How can I help you today?",
     enableSound: true,
     showTypingIndicator: true,
@@ -32,10 +33,11 @@
       this.socket = null;
       this.isConnected = false;
       this.typingTimeout = null;
-      this.websiteId = this.config.websiteId;
+      this.websiteId = this.config.websiteId || this.generateUUID();
       this.connectionRetryCount = 0;
       this.maxRetries = 3;
       this.reconnectDelay = 1000;
+      this.userIdentifier = this.getUserIdentifier();
 
       this.init();
     }
@@ -85,6 +87,11 @@
   --chatbot-red-light: #fecaca;
   --chatbot-red-dark: #b91c1c;
   
+  --chatbot-orange-primary: #ea580c;
+  --chatbot-orange-secondary: #fb923c;
+  --chatbot-orange-light: #fed7aa;
+  --chatbot-orange-dark: #c2410c;
+  
   /* Common colors */
   --chatbot-white: #ffffff;
   --chatbot-gray-50: #f9fafb;
@@ -112,6 +119,7 @@
   position: fixed;
   z-index: var(--chatbot-z-index);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Position variants */
@@ -178,6 +186,10 @@
   background: linear-gradient(135deg, var(--chatbot-red-primary), var(--chatbot-red-secondary));
 }
 
+.chatbot-toggle-btn.chatbot-widget--orange {
+  background: linear-gradient(135deg, var(--chatbot-orange-primary), var(--chatbot-orange-secondary));
+}
+
 /* Unread Badge */
 .chatbot-unread-badge {
   position: absolute;
@@ -214,6 +226,7 @@
   overflow: hidden;
   animation: chatbot-slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid var(--chatbot-gray-200);
+  transition: all 0.3s ease;
 }
 
 .chatbot-widget.minimized {
@@ -240,6 +253,7 @@
   color: white;
   position: relative;
   overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .chatbot-header::before {
@@ -340,6 +354,10 @@
   background: linear-gradient(135deg, var(--chatbot-red-primary), var(--chatbot-red-secondary));
 }
 
+.chatbot-widget.chatbot-widget--orange .chatbot-header {
+  background: linear-gradient(135deg, var(--chatbot-orange-primary), var(--chatbot-orange-secondary));
+}
+
 /* Messages Container */
 .chatbot-messages {
   flex: 1;
@@ -393,6 +411,7 @@
   margin-right: 12px;
   font-size: 14px;
   font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .chatbot-message.user .chatbot-message-avatar {
@@ -403,8 +422,29 @@
   color: white;
 }
 
-.chatbot-message.assistant .chatbot-message-avatar {
+/* Dynamic theme colors for assistant avatar */
+.chatbot-widget.chatbot-widget--blue .chatbot-message.assistant .chatbot-message-avatar {
   background: var(--chatbot-blue-primary);
+  color: white;
+}
+
+.chatbot-widget.chatbot-widget--green .chatbot-message.assistant .chatbot-message-avatar {
+  background: var(--chatbot-green-primary);
+  color: white;
+}
+
+.chatbot-widget.chatbot-widget--purple .chatbot-message.assistant .chatbot-message-avatar {
+  background: var(--chatbot-purple-primary);
+  color: white;
+}
+
+.chatbot-widget.chatbot-widget--red .chatbot-message.assistant .chatbot-message-avatar {
+  background: var(--chatbot-red-primary);
+  color: white;
+}
+
+.chatbot-widget.chatbot-widget--orange .chatbot-message.assistant .chatbot-message-avatar {
+  background: var(--chatbot-orange-primary);
   color: white;
 }
 
@@ -416,30 +456,75 @@
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--chatbot-gray-200);
+  transition: all 0.3s ease;
 }
 
-.chatbot-message.user .chatbot-message-content {
+/* Dynamic theme colors for user messages */
+.chatbot-widget.chatbot-widget--blue .chatbot-message.user .chatbot-message-content {
   background: var(--chatbot-blue-primary);
   color: white;
   border-color: var(--chatbot-blue-primary);
+}
+
+.chatbot-widget.chatbot-widget--green .chatbot-message.user .chatbot-message-content {
+  background: var(--chatbot-green-primary);
+  color: white;
+  border-color: var(--chatbot-green-primary);
+}
+
+.chatbot-widget.chatbot-widget--purple .chatbot-message.user .chatbot-message-content {
+  background: var(--chatbot-purple-primary);
+  color: white;
+  border-color: var(--chatbot-purple-primary);
+}
+
+.chatbot-widget.chatbot-widget--red .chatbot-message.user .chatbot-message-content {
+  background: var(--chatbot-red-primary);
+  color: white;
+  border-color: var(--chatbot-red-primary);
+}
+
+.chatbot-widget.chatbot-widget--orange .chatbot-message.user .chatbot-message-content {
+  background: var(--chatbot-orange-primary);
+  color: white;
+  border-color: var(--chatbot-orange-primary);
+}
+
+/* Dynamic theme colors for assistant messages */
+.chatbot-widget.chatbot-widget--blue .chatbot-message.assistant .chatbot-message-content {
+  background: var(--chatbot-blue-light);
+  border-color: var(--chatbot-blue-primary);
+  color: var(--chatbot-blue-dark);
+}
+
+.chatbot-widget.chatbot-widget--green .chatbot-message.assistant .chatbot-message-content {
+  background: var(--chatbot-green-light);
+  border-color: var(--chatbot-green-primary);
+  color: var(--chatbot-green-dark);
+}
+
+.chatbot-widget.chatbot-widget--purple .chatbot-message.assistant .chatbot-message-content {
+  background: var(--chatbot-purple-light);
+  border-color: var(--chatbot-purple-primary);
+  color: var(--chatbot-purple-dark);
+}
+
+.chatbot-widget.chatbot-widget--red .chatbot-message.assistant .chatbot-message-content {
+  background: var(--chatbot-red-light);
+  border-color: var(--chatbot-red-primary);
+  color: var(--chatbot-red-dark);
+}
+
+.chatbot-widget.chatbot-widget--orange .chatbot-message.assistant .chatbot-message-content {
+  background: var(--chatbot-orange-light);
+  border-color: var(--chatbot-orange-primary);
+  color: var(--chatbot-orange-dark);
 }
 
 .chatbot-message.assistant.error .chatbot-message-content {
   background: var(--chatbot-red-light);
   border-color: var(--chatbot-red-primary);
   color: var(--chatbot-red-dark);
-}
-
-.chatbot-message.assistant.welcome .chatbot-message-content {
-  background: var(--chatbot-blue-light);
-  border-color: var(--chatbot-blue-primary);
-  color: var(--chatbot-blue-dark);
-}
-
-.chatbot-message.assistant .chatbot-message-content {
-  background: var(--chatbot-blue-light);
-  border-color: var(--chatbot-blue-primary);
-  color: var(--chatbot-blue-dark);
 }
 
 .chatbot-message-content p {
@@ -533,10 +618,35 @@
   background: var(--chatbot-gray-50);
 }
 
-.chatbot-message-input:focus {
+/* Dynamic theme colors for input focus */
+.chatbot-widget.chatbot-widget--blue .chatbot-message-input:focus {
   border-color: var(--chatbot-blue-primary);
   background: var(--chatbot-white);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.chatbot-widget.chatbot-widget--green .chatbot-message-input:focus {
+  border-color: var(--chatbot-green-primary);
+  background: var(--chatbot-white);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.chatbot-widget.chatbot-widget--purple .chatbot-message-input:focus {
+  border-color: var(--chatbot-purple-primary);
+  background: var(--chatbot-white);
+  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
+}
+
+.chatbot-widget.chatbot-widget--red .chatbot-message-input:focus {
+  border-color: var(--chatbot-red-primary);
+  background: var(--chatbot-white);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.chatbot-widget.chatbot-widget--orange .chatbot-message-input:focus {
+  border-color: var(--chatbot-orange-primary);
+  background: var(--chatbot-white);
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
 }
 
 .chatbot-message-input:disabled {
@@ -549,7 +659,6 @@
   height: 40px;
   border: none;
   border-radius: 50%;
-  background: var(--chatbot-blue-primary);
   color: white;
   cursor: pointer;
   display: flex;
@@ -559,10 +668,55 @@
   flex-shrink: 0;
 }
 
-.chatbot-send-button:hover:not(:disabled) {
+/* Dynamic theme colors for send button */
+.chatbot-widget.chatbot-widget--blue .chatbot-send-button {
+  background: var(--chatbot-blue-primary);
+}
+
+.chatbot-widget.chatbot-widget--blue .chatbot-send-button:hover:not(:disabled) {
   background: var(--chatbot-blue-dark);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.chatbot-widget.chatbot-widget--green .chatbot-send-button {
+  background: var(--chatbot-green-primary);
+}
+
+.chatbot-widget.chatbot-widget--green .chatbot-send-button:hover:not(:disabled) {
+  background: var(--chatbot-green-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+.chatbot-widget.chatbot-widget--purple .chatbot-send-button {
+  background: var(--chatbot-purple-primary);
+}
+
+.chatbot-widget.chatbot-widget--purple .chatbot-send-button:hover:not(:disabled) {
+  background: var(--chatbot-purple-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
+}
+
+.chatbot-widget.chatbot-widget--red .chatbot-send-button {
+  background: var(--chatbot-red-primary);
+}
+
+.chatbot-widget.chatbot-widget--red .chatbot-send-button:hover:not(:disabled) {
+  background: var(--chatbot-red-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.chatbot-widget.chatbot-widget--orange .chatbot-send-button {
+  background: var(--chatbot-orange-primary);
+}
+
+.chatbot-widget.chatbot-widget--orange .chatbot-send-button:hover:not(:disabled) {
+  background: var(--chatbot-orange-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
 }
 
 .chatbot-send-button:disabled {
@@ -719,13 +873,12 @@
   }
   
   .chatbot-message-content {
-    background: var(--chatbot-green-light);
+    background: var(--chatbot-white);
     border-color: var(--chatbot-gray-300);
-    color: var(--chatbot-green-dark);
   }
   
   .chatbot-message-input {
-    background: var(--chatbot-green-light);
+    background: var(--chatbot-gray-50);
     border-color: var(--chatbot-gray-300);
     color: white;
   }
@@ -975,19 +1128,23 @@
     }
 
     initializeSocket() {
-      if (!this.config.autoConnect || !this.conversationId) return;
+      if (!this.config.autoConnect) return;
 
       try {
         // Parse the backend API URL to get the correct host and port
         const backendUrl = new URL(this.config.apiUrl);
         const wsProtocol = backendUrl.protocol === 'https:' ? 'wss:' : 'ws:';
         
-        // Use the backend host and port for WebSocket connection
-        // const wsUrl = `${wsProtocol}//${backendUrl.host}/ws/chat/${this.conversationId}/?website_id=${this.websiteId}`;
-        // const wsUrl = `${wsProtocol}//${backendUrl.host}/ws/chat/${this.conversationId}/?website_id=${this.websiteId}&user_identifier=${this.getUserIdentifier()}`;
-        const wsUrl = `${wsProtocol}//${backendUrl.host}/ws/chat/${this.config.websiteId}/${this.conversationId}/${this.getUserIdentifier()}/`;
-        console.log('WebSocket URL:', wsUrl);
-        // console.log('Connecting to WebSocket:', wsUrl);
+        // Build WebSocket URL
+        let wsUrl;
+        if (this.conversationId) {
+          wsUrl = `${wsProtocol}//${backendUrl.host}/ws/chat/${this.websiteId}/${this.conversationId}/${this.userIdentifier}/`;
+        } else {
+          // For new conversations
+          wsUrl = `${wsProtocol}//${backendUrl.host}/ws/chat/${this.websiteId}/new/${this.userIdentifier}/`;
+        }
+        
+        console.log('Connecting to WebSocket:', wsUrl);
         
         this.socket = new WebSocket(wsUrl);
 
@@ -1002,14 +1159,14 @@
             this.socket.send(JSON.stringify({
               type: 'identify',
               website_id: this.websiteId,
-              user_identifier: this.getUserIdentifier(),
+              user_identifier: this.userIdentifier,
               metadata: this.getMetadata()
             }));
           }
           
           // Send a ping to keep connection alive
           this.keepAliveInterval = setInterval(() => {
-            if (this.socket.readyState === WebSocket.OPEN) {
+            if (this.socket && this.socket.readyState === WebSocket.OPEN) {
               this.socket.send(JSON.stringify({ type: 'ping' }));
             }
           }, 30000);
@@ -1042,26 +1199,7 @@
         this.socket.onmessage = (e) => {
           try {
             const data = JSON.parse(e.data);
-            
-            if (data.type === 'pong') return;
-
-            if (data.type === 'chat_message') {
-              this.addMessage({
-                role: data.role,
-                content: data.message,
-                timestamp: data.timestamp || new Date().toISOString(),
-                isManual: data.is_manual || false
-              });
-              this.isLoading = false;
-              this.updateWidget();
-            } else if (data.type === 'identified') {
-              console.log('Successfully identified with backend');
-            } else if (data.type === 'connection_established') {
-              console.log('Connection established:', data.message);
-            } else if (data.type === 'error') {
-              console.error('WebSocket error from server:', data.message);
-              this.handleError(data.message);
-            }
+            this.handleWebSocketMessage(data);
           } catch (error) {
             console.error('Error parsing WebSocket message:', error);
           }
@@ -1069,6 +1207,110 @@
       } catch (error) {
         console.warn('WebSocket not available, using HTTP fallback');
       }
+    }
+
+    handleWebSocketMessage(data) {
+      const messageType = data.type;
+      
+      if (messageType === 'pong') return;
+
+      if (messageType === 'chat_message') {
+        this.addMessage({
+          role: data.role,
+          content: data.message,
+          timestamp: data.timestamp || new Date().toISOString(),
+          isManual: data.is_manual || false
+        });
+        this.isLoading = false;
+        this.updateWidget();
+        
+        // Update conversation ID if we didn't have one
+        if (data.conversation_id && !this.conversationId) {
+          this.conversationId = data.conversation_id;
+        }
+        
+      } else if (messageType === 'identified') {
+        console.log('Successfully identified with backend');
+        
+      } else if (messageType === 'connection_established') {
+        console.log('Connection established:', data.message);
+        
+        // Update conversation ID if provided
+        if (data.conversation_id) {
+          this.conversationId = data.conversation_id;
+        }
+        
+      } else if (messageType === 'config_updated') {
+        // Handle configuration updates
+        this.handleConfigUpdate(data.config);
+        
+      } else if (messageType === 'conversation_ended') {
+        this.handleConversationEnded(data.message);
+        
+      } else if (messageType === 'error') {
+        console.error('WebSocket error from server:', data.message);
+        this.handleError(data.message);
+      }
+    }
+
+    handleConfigUpdate(newConfig) {
+      // Update configuration
+      const oldTheme = this.config.theme;
+      const oldPosition = this.config.position;
+      
+      Object.assign(this.config, newConfig);
+      
+      // Update theme and position if changed
+      if (oldTheme !== this.config.theme || oldPosition !== this.config.position) {
+        this.applyThemeAndPosition();
+      }
+      
+      // Update widget content
+      this.updateWidget();
+      
+      console.log('Configuration updated:', newConfig);
+    }
+
+    applyThemeAndPosition() {
+      // Update container classes
+      this.container.className = `chatbot-widget-container chatbot-widget--${this.config.position.replace('-', '--')}`;
+      
+      // If widget is open, update the theme classes
+      if (this.isOpen) {
+        const widget = this.container.querySelector('.chatbot-widget');
+        if (widget) {
+          // Remove old theme classes
+          widget.className = widget.className.replace(/chatbot-widget--\w+/g, '');
+          // Add new theme class
+          widget.classList.add(`chatbot-widget--${this.config.theme}`);
+        }
+      }
+      
+      // Update toggle button theme
+      const toggleBtn = this.container.querySelector('.chatbot-toggle-btn');
+      if (toggleBtn) {
+        toggleBtn.className = toggleBtn.className.replace(/chatbot-widget--\w+/g, '');
+        toggleBtn.classList.add(`chatbot-widget--${this.config.theme}`);
+      }
+    }
+
+    handleConversationEnded(message) {
+      // Add system message about conversation end
+      this.addMessage({
+        role: 'assistant',
+        content: `🔚 **Conversation Ended**\n\n${message}`,
+        timestamp: new Date().toISOString(),
+        isSystem: true
+      });
+      
+      // Disable input
+      this.isLoading = true;
+      this.updateWidget();
+      
+      // Reset after a delay to allow new conversation
+      setTimeout(() => {
+        this.clearConversation();
+      }, 3000);
     }
 
     async sendMessage() {
@@ -1089,12 +1331,12 @@
       this.updateWidget();
 
       try {
-        // If this is the first message and we don't have a conversation ID, create one
+        // Generate conversation ID if we don't have one
         if (!this.conversationId) {
           this.conversationId = this.generateUUID();
           console.log('Generated new conversation ID:', this.conversationId);
           
-          // Initialize WebSocket connection now that we have a conversation ID
+          // Initialize WebSocket connection with the new conversation ID
           if (this.config.autoConnect) {
             this.initializeSocket();
           }
@@ -1106,6 +1348,7 @@
           this.socket.send(JSON.stringify({
             type: 'chat_message',
             message: message,
+            websiteId: this.websiteId,
             conversationId: this.conversationId,
             metadata: this.getMetadata()
           }));
@@ -1131,7 +1374,8 @@
           body: JSON.stringify({
             message: message,
             conversationId: this.conversationId,
-            userIdentifier: this.getUserIdentifier(),
+            websiteId: this.websiteId,
+            userIdentifier: this.userIdentifier,
             metadata: this.getMetadata()
           })
         });
@@ -1142,10 +1386,14 @@
 
         const data = await response.json();
 
-        // If conversation was created and we don't have WebSocket, try to establish it
-        if (data.conversationId && !this.isConnected && this.config.autoConnect) {
+        // Update conversation ID if provided
+        if (data.conversationId) {
           this.conversationId = data.conversationId;
-          this.initializeSocket();
+          
+          // Try to establish WebSocket if not connected
+          if (!this.isConnected && this.config.autoConnect) {
+            this.initializeSocket();
+          }
         }
 
         // Add the response message
@@ -1180,7 +1428,11 @@
         page_url: window.location.href,
         page_title: document.title,
         user_agent: navigator.userAgent,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight
+        }
       };
     }
 
@@ -1223,6 +1475,11 @@
       if (this.isOpen) {
         this.unreadCount = 0;
         this.isMinimized = false;
+        
+        // Initialize WebSocket if not connected and we have a conversation
+        if (!this.isConnected && this.config.autoConnect && this.conversationId) {
+          this.initializeSocket();
+        }
       }
       this.updateWidget();
     }
@@ -1239,6 +1496,7 @@
 
     restoreWidget() {
       this.isMinimized = false;
+      this.unreadCount = 0;
       this.updateWidget();
     }
 
@@ -1359,6 +1617,20 @@
 
     restore() {
       this.restoreWidget();
+    }
+
+    updateConfig(newConfig) {
+      const oldTheme = this.config.theme;
+      const oldPosition = this.config.position;
+      
+      Object.assign(this.config, newConfig);
+      
+      // Apply theme and position changes
+      if (oldTheme !== this.config.theme || oldPosition !== this.config.position) {
+        this.applyThemeAndPosition();
+      }
+      
+      this.updateWidget();
     }
 
     destroy() {

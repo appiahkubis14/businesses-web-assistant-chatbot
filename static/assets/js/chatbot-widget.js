@@ -6,6 +6,7 @@
     apiUrl: 'http://172.20.10.2:5000',
     theme: 'green',
     position: 'bottom-right',
+    websiteId: null, // Must be provided
     botName: 'AI Assistant',
     welcomeMessage: "Hi! I'm your AI assistant. How can I help you today?",
     enableSound: true,
@@ -26,6 +27,7 @@
       this.isOpen = false;
       this.isMinimized = false;
       this.messages = [];
+      this.websiteId = this.config.websiteId || 'default-website';
       this.conversationId = this.generateUUID();
       this.unreadCount = 0;
       this.isLoading = false;
@@ -1143,6 +1145,7 @@ initializeSocket() {
 
 
     async sendMessage() {
+      console.log('Sending message...' , this.configwebsiteId, this.conversationId);
       const input = document.getElementById('chatbot-input');
       if (!input || !input.value.trim() || this.isLoading) return;
 
@@ -1164,6 +1167,7 @@ initializeSocket() {
           this.socket.send(JSON.stringify({
             type: 'chat_message',
             message: message,
+            websiteId: this.websiteId,
             conversationId: this.conversationId
           }));
         } else {

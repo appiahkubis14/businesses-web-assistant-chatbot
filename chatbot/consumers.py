@@ -27,20 +27,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
         try:
             # Get parameters from URL route
             self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
+            print(f'Connecting to chat: conversation_id={self.conversation_id}')
             
             # Extract optional parameters with fallbacks
             self.website_id = self.scope['url_route']['kwargs'].get('website_id')
             self.user_identifier = self.scope['url_route']['kwargs'].get('user_identifier', 'Anonymous')
             
-            # Try to get website_id from query string if not in URL path
-            if not self.website_id:
-                query_string = self.scope.get('query_string', b'').decode()
-                if query_string:
-                    from urllib.parse import parse_qs
-                    params = parse_qs(query_string)
-                    self.website_id = params.get('website_id', [None])[0]
-                    if not self.user_identifier or self.user_identifier == 'Anonymous':
-                        self.user_identifier = params.get('user_identifier', ['Anonymous'])[0]
+            # # Try to get websiteId from query string if not in URL path
+            # if not self.website_id:
+            #     query_string = self.scope.get('query_string', b'').decode()
+            #     if query_string:
+            #         from urllib.parse import parse_qs
+            #         params = parse_qs(query_string)
+            #         self.website_id = params.get('website_id', [None])[0]
+            #         if not self.user_identifier or self.user_identifier == 'Anonymous':
+            #             self.user_identifier = params.get('user_identifier', ['Anonymous'])[0]
 
             print(f'Connecting to chat: conversation_id={self.conversation_id}, website_id={self.website_id}, user_identifier={self.user_identifier}')
             
@@ -201,97 +202,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'user_identifier': self.user_identifier,
             'status': 'success'
         }))
-    
-    # async def handle_chat_message(self, message_data):
-    #     """Handle incoming chat message from website visitor"""
-    #     user_message = message_data.get('message', '').strip()
-    #     metadata = message_data.get('metadata', {})
         
-    #     if not user_message:
-    #         await self.send(text_data=json.dumps({
-    #             'type': 'error',
-    #             'message': 'Empty message',
-    #             'code': 'EMPTY_MESSAGE'
-    #         }))
-    #         return
-        
-    #     try:
-    #         # Get conversation
-    #         conversation = await self.get_conversation(self.conversation_id)
-    #         if not conversation:
-    #             # If conversation doesn't exist yet, check if we have identification
-    #             if not self.website_id:
-    #                 await self.send(text_data=json.dumps({
-    #                     'type': 'error',
-    #                     'message': 'Please identify yourself first by sending an "identify" message with website_id',
-    #                     'code': 'NOT_IDENTIFIED'
-    #                 }))
-    #                 return
-                
-    #             # Create conversation with stored identification
-    #             conversation = await self.get_or_create_conversation()
-    #             if not conversation:
-    #                 logger.error(f"Conversation {self.conversation_id} not found and cannot be created")
-    #                 await self.send(text_data=json.dumps({
-    #                     'type': 'error',
-    #                     'message': 'Conversation not found. Please refresh the page and try again.',
-    #                     'code': 'CONVERSATION_NOT_FOUND'
-    #                 }))
-    #                 return
-            
-    #         # Save user message
-    #         user_msg = await self.save_message(conversation, 'user', user_message, metadata)
-            
-    #         # Mark conversation as requiring attention
-    #         await self.mark_conversation_attention(conversation, True)
-            
-    #         # Update conversation metadata if provided
-    #         if metadata:
-    #             await self.update_conversation_metadata(conversation, metadata)
-            
-    #         # Notify dashboard about new user message
-    #         await self.notify_dashboard_new_message(conversation, user_msg)
-            
-    #         # Send automatic response to user
-    #         auto_response = "Thank you for your message. A support agent will respond to you shortly."
-            
-    #         # Save auto response
-    #         assistant_msg = await self.save_message(conversation, 'assistant', auto_response, {
-    #             'is_auto': True,
-    #             'auto_response_type': 'acknowledgment'
-    #         })
-            
-    #         # Send auto response to visitor immediately
-    #         await self.send(text_data=json.dumps({
-    #             'type': 'chat_message',
-    #             'message': auto_response,
-    #             'role': 'assistant',
-    #             'message_id': str(assistant_msg.id),
-    #             'conversation_id': str(conversation.id),
-    #             'timestamp': assistant_msg.timestamp.isoformat(),
-    #             'is_auto': True
-    #         }))
-            
-    #         logger.info(f"Processed user message in conversation {self.conversation_id}")
-            
-    #     except Exception as e:
-    #         logger.error(f"Error processing chat message: {e}")
-    #         await self.send(text_data=json.dumps({
-    #             'type': 'error',
-    #             'message': 'Sorry, I encountered an error. Please try again.',
-    #             'role': 'assistant',
-    #             'is_error': True,
-    #             'conversation_id': str(self.conversation_id),
-    #             'timestamp': timezone.now().isoformat(),
-    #             'code': 'MESSAGE_PROCESSING_ERROR'
-    #         }))
-    
-
+        # Send connection confirmation
+        await self.send(text_data=json.dumps({
+            'type': 'connection_established',
+            'message': 'WebSocket connection established',
+            'conversation_id': str(self.conversation_id),
+            'status': 'success',
+            'requires_identification': False
+        }))
 
     async def handle_chat_message(self, message_data):
         """Handle incoming chat message from website visitor"""
         user_message = message_data.get('message', '').strip()
+        website_id = message_data.get('websiteId')
+        user_identifier = message_data.get('user_identifier', 'Anonymous')
         metadata = message_data.get('metadata', {})
+        
+        print(f'Handling chat message for conversation: {self.conversation_id}, user_message: {user_message}, website_id: {website_id}')
         
         if not user_message:
             await self.send(text_data=json.dumps({
@@ -304,16 +232,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
         try:
             # Get conversation - use the conversation_id from the connection scope
             conversation = await self.get_conversation(self.conversation_id)
-            print(f'Handling chat message for conversation: {self.conversation_id}, found conversation: {conversation} , website_id: {self.website_id}, user_identifier: {self.user_identifier}')
+            
+            # If conversation doesn't exist yet, check if we have website_id
             if not conversation:
-                # If conversation doesn't exist yet, check if we have identification
-                if not self.website_id:
+                if not website_id:
                     await self.send(text_data=json.dumps({
                         'type': 'error',
                         'message': 'Please identify yourself first by sending an "identify" message with website_id',
                         'code': 'NOT_IDENTIFIED'
                     }))
                     return
+                
+                # Set website_id and user_identifier for conversation creation
+                self.website_id = website_id
+                self.user_identifier = user_identifier
                 
                 # Create conversation with stored identification
                 conversation = await self.get_or_create_conversation()
@@ -349,15 +281,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             })
             
             # Send auto response to visitor immediately
-            await self.send(text_data=json.dumps({
-                'type': 'chat_message',
-                'message': auto_response,
-                'role': 'assistant',
-                'message_id': str(assistant_msg.id),
-                'conversation_id': str(conversation.id),
-                'timestamp': assistant_msg.timestamp.isoformat(),
-                'is_auto': True
-            }))
+            # await self.send(text_data=json.dumps({
+            #     'type': 'chat_message',
+            #     'message': auto_response,
+            #     'role': 'assistant',
+            #     'message_id': str(assistant_msg.id),
+            #     'conversation_id': str(conversation.id),
+            #     'timestamp': assistant_msg.timestamp.isoformat(),
+            #     'is_auto': True
+            # }))
             
             logger.info(f"Processed user message in conversation {self.conversation_id}")
             
@@ -491,12 +423,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'conversation_id': conversation_id,
                 'user_type': user_type
             }))
+
     
     @database_sync_to_async
     def get_or_create_conversation(self):
         """Get or create conversation from database"""
 
-        print(f"Getting or creating conversation: {self.conversation_id} for website: {self.website_id} and user: {self.user_identifier}")
+        # print(f"Getting or creating conversation: {self.conversation_id} for website: {self.website_id} and user: {self.user_identifier}")
         try:
             # First try to get existing conversation
             try:
@@ -522,7 +455,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     id=self.conversation_id,
                     website=website,
                     user_identifier=self.user_identifier,
-                    status='active'
+                    # status='active'
                 )
                 logger.info(f"Created new conversation: {self.conversation_id} for website {self.website_id}")
                 return conversation
@@ -563,7 +496,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 conversation=conversation,
                 role=role,
                 content=content,
-                metadata=metadata or {}
+                # metadata=metadata or {}
             )
             # Update conversation total messages
             conversation.total_messages = conversation.messages.count()
@@ -888,7 +821,7 @@ class DashboardConsumer(AsyncWebsocketConsumer):
                             'timestamp': message.timestamp.isoformat(),
                             'is_manual': True,
                             'agent_id': self.user_id,
-                            'metadata': metadata
+                            # 'metadata': metadata
                         },
                         'conversation_id': conversation_id,
                         'website_id': str(website_id)
@@ -1099,8 +1032,8 @@ class DashboardConsumer(AsyncWebsocketConsumer):
                 conversation=conversation,
                 role='assistant',
                 content=content,
-                is_manual_response=True,
-                metadata=metadata or {}
+                # is_manual_response=True,
+                # metadata=metadata or {}
             )
             # Update conversation total messages and mark as not requiring attention
             conversation.total_messages = conversation.messages.count()
