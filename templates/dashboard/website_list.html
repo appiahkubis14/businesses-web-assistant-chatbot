@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+
+{% block title %}Websites - Chatbot Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Your Websites</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'dashboard:website_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>
+                Add Website
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if websites %}
+    <div class="row">
+        {% for website in websites %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">{{ website.name }}</h5>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-{{ website.theme }} me-2">{{ website.theme }}</span>
+                        {% if website.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <p class="card-text">
+                        <i class="fas fa-globe me-2"></i>
+                        <a href="{{ website.url }}" target="_blank" class="text-decoration-none">
+                            {{ website.url|truncatechars:35 }}
+                        </a>
+                    </p>
+                    
+                    <p class="card-text">
+                        <i class="fas fa-robot me-2"></i>
+                        {{ website.bot_name }}
+                    </p>
+                    
+                    <p class="card-text">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            Created {{ website.created_at|timesince }} ago
+                        </small>
+                    </p>
+                    
+                    <div class="mt-3">
+                        <p class="card-text text-muted small">
+                            {{ website.welcome_message|truncatechars:80 }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'dashboard:website_detail' website.id %}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                                View
+                            </a>
+                            <a href="{% url 'dashboard:website_edit' website.id %}" 
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-edit"></i>
+                                Edit
+                            </a>
+                        </div>
+                        
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                    type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="showInstallCode('{{ website.id }}')">
+                                        <i class="fas fa-code me-2"></i>Get Install Code
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'dashboard:analytics' %}?website={{ website.id }}">
+                                        <i class="fas fa-chart-bar me-2"></i>Analytics
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#" onclick="confirmDelete('{{ website.id }}', '{{ website.name }}')">
+                                        <i class="fas fa-trash me-2"></i>Delete
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination if needed -->
+    {% if websites.has_other_pages %}
+    <nav aria-label="Websites pagination">
+        <ul class="pagination justify-content-center">
+            {% if websites.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ websites.previous_page_number }}">Previous</a>
+                </li>
+            {% endif %}
+            
+            {% for num in websites.paginator.page_range %}
+                {% if websites.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if websites.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ websites.next_page_number }}">Next</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+{% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-globe fa-5x text-muted"></i>
+        </div>
+        <h3 class="text-muted">No websites yet</h3>
+        <p class="text-muted mb-4">
+            Create your first website to start using our chatbot service.<br>
+            It only takes a few minutes to get up and running!
+        </p>
+        <a href="{% url 'dashboard:website_create' %}" class="btn btn-primary btn-lg">
+            <i class="fas fa-plus me-2"></i>
+            Create Your First Website
+        </a>
+    </div>
+{% endif %}
+
+<!-- Install Code Modal -->
+<div class="modal fade" id="installCodeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Install Chatbot Code</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">
+                    Copy and paste this code into your website's HTML, just before the closing <code>&lt;/body&gt;</code> tag:
+                </p>
+                <div class="widget-code" id="installCode">
+                    <!-- Code will be populated by JavaScript -->
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-success" onclick="copyInstallCode()">
+                        <i class="fas fa-copy me-1"></i>
+                        Copy Code
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the website <strong id="deleteWebsiteName"></strong>?</p>
+                <p class="text-danger">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    This action cannot be undone. All conversations and analytics data will be lost.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Website</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showInstallCode(websiteId) {
+    const code = `<!-- Chatbot Widget -->
+<script>
+    window.ChatBotConfig = {
+        websiteId: '${websiteId}',
+        apiUrl: 'http://172.20.10.2:5000'
+    };
+</script>
+<script src="http://172.20.10.2:5000/static/chatbot-widget.js"></script>`;
+
+    document.getElementById('installCode').textContent = code;
+    const modal = new bootstrap.Modal(document.getElementById('installCodeModal'));
+    modal.show();
+}
+
+function copyInstallCode() {
+    const code = document.getElementById('installCode').textContent;
+    copyToClipboard(code);
+}
+
+function confirmDelete(websiteId, websiteName) {
+    document.getElementById('deleteWebsiteName').textContent = websiteName;
+    document.getElementById('deleteForm').action = `/websites/${websiteId}/delete/`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

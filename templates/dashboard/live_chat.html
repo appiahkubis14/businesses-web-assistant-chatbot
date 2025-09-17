@@ -1,0 +1,919 @@
+{% extends 'base.html' %}
+
+{% block title %}Live Chat - Chatbot Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        Live Chat Monitor
+        <span class="live-indicator ms-2"></span>
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-outline-primary" onclick="refreshConversations()">
+                <i class="fas fa-sync-alt me-1"></i>
+                Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Active Conversations List -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Active Conversations</h5>
+                <span class="badge bg-primary" id="conversationsCount">{{ active_conversations|length }}</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="conversationsList">
+                    {% for conversation in active_conversations %}
+                    <a href="#" class="list-group-item list-group-item-action conversation-item {% if forloop.first %}active{% endif %}" 
+                       data-conversation-id="{{ conversation.id }}" onclick="selectConversation(this)">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ conversation.website.name }}</h6>
+                            <small>{{ conversation.started_at|timesince }} ago</small>
+                        </div>
+                        <p class="mb-1 text-truncate">
+                            {% with conversation.messages.last as last_message %}
+                                {% if last_message %}
+                                    <strong>{{ last_message.role|title }}:</strong> {{ last_message.content|truncatechars:50 }}
+                                {% else %}
+                                    No messages yet
+                                {% endif %}
+                            {% endwith %}
+                        </p>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">{{ conversation.user_identifier|default:"Anonymous" }}</small>
+                            <span class="badge {% if conversation.requires_attention %}bg-warning{% else %}bg-success{% endif %}">
+                                {{ conversation.total_messages }} msgs
+                            </span>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="text-center p-4" id="noConversationsMessage">
+                        <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No active conversations</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Interface -->
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0" id="currentConversationTitle">
+                    {% if active_conversations %}
+                        {{ active_conversations.0.website.name }} - {{ active_conversations.0.user_identifier|default:"Anonymous" }}
+                    {% else %}
+                        Select a conversation
+                    {% endif %}
+                </h5>
+                <div class="d-flex align-items-center">
+                    <span class="badge me-2" id="conversationStatus">
+                        {% if active_conversations.0 %}
+                            {% if active_conversations.0.requires_attention %}
+                                <span class="badge bg-warning">Needs Attention</span>
+                            {% else %}
+                                <span class="badge bg-success">Active</span>
+                            {% endif %}
+                        {% endif %}
+                    </span>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="#" id="viewDetailsLink">
+                                    <i class="fas fa-eye me-2"></i>View Details
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="endCurrentConversation()">
+                                    <i class="fas fa-stop me-2"></i>End Conversation
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body p-0 d-flex flex-column">
+                <!-- Messages Container -->
+                <div class="flex-grow-1 p-3" style="overflow-y: auto; max-height: 400px;" id="messagesContainer">
+                    {% if active_conversations %}
+                        <div id="messagesList">
+                            {% for message in active_conversations.0.messages.all %}
+                                <div class="d-flex mb-3 {% if message.role == 'user' %}justify-content-end{% else %}justify-content-start{% endif %}">
+                                    <div class="message-bubble {% if message.role == 'user' %}user-message{% else %}ai-message{% endif %}">
+                                        <div class="message-content">{{ message.content }}</div>
+                                        <div class="message-time">
+                                            <small>{{ message.timestamp|time }}</small>
+                                            {% if message.role == 'assistant' and message.is_manual_response %}
+                                                <small class="ms-2"><i class="fas fa-user-tie" title="Manual response"></i></small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted" id="noMessagesPlaceholder">
+                            <i class="fas fa-comment-dots fa-3x mb-3"></i>
+                            <p>Select a conversation to view messages</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Typing Indicator -->
+                <div id="typingIndicator" class="px-3" style="display: none;">
+                    <div class="d-flex justify-content-start">
+                        <div class="message-bubble ai-message typing">
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Message Input -->
+                <div class="border-top p-3">
+                    <form id="messageForm" onsubmit="sendManualResponse(event)">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Type your response..." id="messageInput" 
+                                {% if not active_conversations %}disabled{% endif %}>
+                            <button class="btn btn-primary" type="submit" id="sendButton" {% if not active_conversations %}disabled{% endif %}>
+                                <span id="sendButtonContent">
+                                    <i class="fas fa-paper-plane"></i> Send
+                                </span>
+                                <span id="sendButtonLoading" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i> Sending...
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Connection Status -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
+    <div class="toast" id="connectionToast" role="alert">
+        <div class="toast-header">
+            <i class="fas fa-wifi text-success me-2" id="connectionIcon"></i>
+            <strong class="me-auto">Live Updates</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="connectionMessage">
+            Connecting to real-time updates...
+        </div>
+    </div>
+</div>
+
+<!-- Notification Toast -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1001;">
+    <div class="toast" id="notificationToast" role="alert">
+        <div class="toast-header">
+            <i class="fas fa-bell text-primary me-2"></i>
+            <strong class="me-auto">Notification</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="notificationMessage">
+            <!-- Notification content will be inserted here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.message-bubble {
+    max-width: 70%;
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.user-message {
+    background-color: #007bff;
+    color: white;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.ai-message {
+    background-color: #f8f9fa;
+    color: #212529;
+    border-bottom-left-radius: 0.25rem;
+    border: 1px solid #e9ecef;
+}
+
+.message-content {
+    margin-bottom: 0.25rem;
+    line-height: 1.4;
+}
+
+.message-time {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+.conversation-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.conversation-item.active {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #007bff;
+}
+
+.conversation-item:hover {
+    background-color: #f8f9fa;
+}
+
+.live-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #28a745;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+    }
+    
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+.typing-dots {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.typing-dots span {
+    height: 8px;
+    width: 8px;
+    background-color: #6c757d;
+    border-radius: 50%;
+    display: inline-block;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-dots span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes typing {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+#messagesContainer::-webkit-scrollbar {
+    width: 6px;
+}
+
+#messagesContainer::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#messagesContainer::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#messagesContainer::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Global variables
+let currentConversationId = null;
+let wsConnection = null;
+let isConnected = false;
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing live chat dashboard...');
+    
+    // Initialize WebSocket connection
+    initWebSocket();
+    
+    // Set current conversation if available
+    const activeConversation = document.querySelector('.conversation-item.active');
+    if (activeConversation) {
+        currentConversationId = activeConversation.getAttribute('data-conversation-id');
+        console.log('Current conversation ID:', currentConversationId);
+    }
+    
+    // Scroll to bottom of messages
+    scrollMessagesToBottom();
+    
+    // Show connection toast
+    showConnectionToast('Connecting to real-time updates...', 'info');
+});
+
+function initWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/dashboard/`;
+    
+    console.log('Connecting to WebSocket:', wsUrl);
+    
+    wsConnection = new WebSocket(wsUrl);
+    
+    wsConnection.onopen = function(event) {
+        console.log('Dashboard WebSocket connected');
+        isConnected = true;
+        updateConnectionStatus(true);
+        showConnectionToast('Connected to real-time updates', 'success');
+        
+        // Send subscription message for websites
+        wsConnection.send(JSON.stringify({
+            type: 'subscribe_websites',
+            website_ids: [] // Empty array will trigger auto-subscription
+        }));
+    };
+    
+    wsConnection.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            console.log('Dashboard WebSocket message:', data);
+            
+            handleWebSocketMessage(data);
+        } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+        }
+    };
+    
+    wsConnection.onclose = function(event) {
+        console.log('Dashboard WebSocket disconnected');
+        isConnected = false;
+        updateConnectionStatus(false);
+        showConnectionToast('Disconnected. Reconnecting...', 'warning');
+        
+        // Try to reconnect after 3 seconds
+        setTimeout(initWebSocket, 3000);
+    };
+    
+    wsConnection.onerror = function(error) {
+        console.error('Dashboard WebSocket error:', error);
+        isConnected = false;
+        updateConnectionStatus(false);
+        showConnectionToast('Connection error. Reconnecting...', 'danger');
+    };
+}
+
+function handleWebSocketMessage(data) {
+    switch(data.type) {
+        case 'connection_established':
+            console.log('Dashboard connection confirmed');
+            break;
+            
+        case 'new_conversation':
+            console.log('New conversation:', data.conversation);
+            addNewConversation(data.conversation);
+            showNotification('New conversation started', 'info');
+            playNotificationSound();
+            break;
+            
+        case 'new_message':
+            console.log('New message:', data.message);
+            updateConversationMessage(data.conversation_id, data.message);
+            
+            // If this message is for the current conversation, display it
+            if (currentConversationId == data.conversation_id) {
+                appendMessage(data.message);
+                scrollMessagesToBottom();
+            }
+            
+            // Show notification for new user messages
+            if (data.message.role === 'user') {
+                showNotification('New message from visitor', 'info');
+                playNotificationSound();
+            }
+            break;
+            
+        case 'conversation_ended':
+            console.log('Conversation ended:', data.conversation_id);
+            removeConversation(data.conversation_id);
+            
+            // If the ended conversation is the current one, clear the chat
+            if (currentConversationId == data.conversation_id) {
+                clearChatInterface();
+            }
+            showNotification('Conversation ended', 'warning');
+            break;
+            
+        case 'typing_indicator':
+            if (currentConversationId == data.conversation_id) {
+                handleTypingIndicator(data);
+            }
+            break;
+            
+        case 'error':
+            console.error('WebSocket error:', data.message);
+            showNotification('Error: ' + data.message, 'danger');
+            break;
+            
+        default:
+            console.log('Unknown message type:', data.type);
+    }
+}
+
+function selectConversation(element) {
+    // Remove active class from all items
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Add active class to selected item
+    element.classList.add('active');
+    
+    // Update current conversation ID
+    currentConversationId = element.getAttribute('data-conversation-id');
+    console.log('Selected conversation:', currentConversationId);
+    
+    // Load conversation messages
+    loadConversationMessages(currentConversationId);
+    
+    // Update UI
+    updateChatInterface(element);
+    
+    // Enable message input
+    document.getElementById('messageInput').disabled = false;
+    document.getElementById('sendButton').disabled = false;
+}
+
+function loadConversationMessages(conversationId) {
+    console.log('Loading messages for conversation:', conversationId);
+    
+    fetch(`/api/conversations/${conversationId}/messages/`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.messages) {
+            displayMessages(data.messages);
+            scrollMessagesToBottom();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading messages:', error);
+        showNotification('Error loading messages', 'danger');
+    });
+}
+
+function displayMessages(messages) {
+    const messagesContainer = document.getElementById('messagesList');
+    if (!messagesContainer) {
+        // Create messages list if it doesn't exist
+        const container = document.getElementById('messagesContainer');
+        container.innerHTML = '<div id="messagesList"></div>';
+    }
+    
+    const messagesList = document.getElementById('messagesList');
+    messagesList.innerHTML = '';
+    
+    messages.forEach(message => {
+        appendMessage(message);
+    });
+}
+
+function appendMessage(message) {
+    const messagesList = document.getElementById('messagesList');
+    if (!messagesList) return;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `d-flex mb-3 ${message.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`;
+    
+    const bubbleClass = message.role === 'user' ? 'user-message' : 'ai-message';
+    const manualIcon = message.is_manual ? '<small class="ms-2"><i class="fas fa-user-tie" title="Manual response"></i></small>' : '';
+    
+    messageDiv.innerHTML = `
+        <div class="message-bubble ${bubbleClass}">
+            <div class="message-content">${escapeHtml(message.content)}</div>
+            <div class="message-time">
+                <small>${formatTime(message.timestamp)}</small>
+                ${manualIcon}
+            </div>
+        </div>
+    `;
+    
+    messagesList.appendChild(messageDiv);
+}
+
+function sendManualResponse(event) {
+    event.preventDefault();
+    
+    if (!currentConversationId) {
+        showNotification('Please select a conversation first', 'warning');
+        return;
+    }
+    
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    
+    if (!message) {
+        showNotification('Please enter a message', 'warning');
+        return;
+    }
+    
+    // Disable form while sending
+    setFormLoading(true);
+    
+    // Send via WebSocket first
+    if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        wsConnection.send(JSON.stringify({
+            type: 'send_message',
+            conversation_id: currentConversationId,
+            message: message
+        }));
+    }
+    
+    // Also send via HTTP as backup
+    fetch('/api/send_manual_response/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            conversation_id: currentConversationId,
+            message: message
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Message sent successfully');
+            messageInput.value = '';
+            
+            // Add message to current conversation display
+            const messageData = {
+                content: message,
+                role: 'assistant',
+                timestamp: new Date().toISOString(),
+                is_manual: true
+            };
+            appendMessage(messageData);
+            scrollMessagesToBottom();
+            
+            // Update conversation list
+            updateConversationMessage(currentConversationId, messageData);
+        } else {
+            showNotification('Error sending message: ' + (data.error || 'Unknown error'), 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error sending message:', error);
+        showNotification('Error sending message', 'danger');
+    })
+    .finally(() => {
+        setFormLoading(false);
+    });
+}
+
+function addNewConversation(conversation) {
+    const conversationsList = document.getElementById('conversationsList');
+    const noConversationsMessage = document.getElementById('noConversationsMessage');
+    
+    // Remove "no conversations" message if it exists
+    if (noConversationsMessage) {
+        noConversationsMessage.remove();
+    }
+    
+    // Create new conversation item
+    const conversationItem = document.createElement('a');
+    conversationItem.href = '#';
+    conversationItem.className = 'list-group-item list-group-item-action conversation-item';
+    conversationItem.setAttribute('data-conversation-id', conversation.id);
+    conversationItem.onclick = function() { selectConversation(this); };
+    
+    conversationItem.innerHTML = `
+        <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1">${escapeHtml(conversation.website_name || 'Unknown Website')}</h6>
+            <small>just now</small>
+        </div>
+        <p class="mb-1 text-truncate">
+            New conversation started
+        </p>
+        <div class="d-flex justify-content-between">
+            <small class="text-muted">${escapeHtml(conversation.user_identifier || 'Anonymous')}</small>
+            <span class="badge bg-warning">0 msgs</span>
+        </div>
+    `;
+    
+    // Add to top of list
+    conversationsList.insertBefore(conversationItem, conversationsList.firstChild);
+    
+    // Update counter
+    updateActiveConversationsCounter();
+}
+
+function updateConversationMessage(conversationId, message) {
+    const conversationItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+    if (!conversationItem) return;
+    
+    // Update last message preview
+    const messagePreview = conversationItem.querySelector('p.mb-1');
+    if (messagePreview) {
+        const roleLabel = message.role === 'user' ? 'Visitor' : 'Agent';
+        const preview = message.content.length > 50 ? message.content.substring(0, 50) + '...' : message.content;
+        messagePreview.innerHTML = `<strong>${roleLabel}:</strong> ${escapeHtml(preview)}`;
+    }
+    
+    // Update message count badge
+    const badge = conversationItem.querySelector('.badge');
+    if (badge) {
+        const currentCount = parseInt(badge.textContent.split(' ')[0]) || 0;
+        badge.textContent = `${currentCount + 1} msgs`;
+        
+        // Update badge color based on role
+        badge.className = message.role === 'user' ? 'badge bg-warning' : 'badge bg-success';
+    }
+    
+    // Update timestamp
+    const timeElement = conversationItem.querySelector('small');
+    if (timeElement) {
+        timeElement.textContent = 'just now';
+    }
+    
+    // Move conversation to top of list
+    const conversationsList = document.getElementById('conversationsList');
+    conversationsList.insertBefore(conversationItem, conversationsList.firstChild);
+}
+
+function removeConversation(conversationId) {
+    const conversationItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+    if (conversationItem) {
+        conversationItem.remove();
+        updateActiveConversationsCounter();
+        
+        // If no conversations left, show placeholder
+        const conversationsList = document.getElementById('conversationsList');
+        if (conversationsList.children.length === 0) {
+            conversationsList.innerHTML = `
+                <div class="text-center p-4" id="noConversationsMessage">
+                    <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                    <p class="text-muted">No active conversations</p>
+                </div>
+            `;
+        }
+    }
+}
+
+function clearChatInterface() {
+    currentConversationId = null;
+    document.getElementById('currentConversationTitle').textContent = 'Select a conversation';
+    document.getElementById('conversationStatus').innerHTML = '';
+    
+    const messagesContainer = document.getElementById('messagesContainer');
+    messagesContainer.innerHTML = `
+        <div class="text-center py-5 text-muted" id="noMessagesPlaceholder">
+            <i class="fas fa-comment-dots fa-3x mb-3"></i>
+            <p>Select a conversation to view messages</p>
+        </div>
+    `;
+    
+    // Disable message input
+    document.getElementById('messageInput').disabled = true;
+    document.getElementById('sendButton').disabled = true;
+}
+
+function updateChatInterface(conversationElement) {
+    // Update title
+    const websiteName = conversationElement.querySelector('h6').textContent;
+    const userIdentifier = conversationElement.querySelector('.text-muted').textContent;
+    document.getElementById('currentConversationTitle').textContent = `${websiteName} - ${userIdentifier}`;
+    
+    // Update status badge
+    const badge = conversationElement.querySelector('.badge');
+    const isWarning = badge.classList.contains('bg-warning');
+    const statusHtml = isWarning ? 
+        '<span class="badge bg-warning">Needs Attention</span>' : 
+        '<span class="badge bg-success">Active</span>';
+    document.getElementById('conversationStatus').innerHTML = statusHtml;
+}
+
+function handleTypingIndicator(data) {
+    const typingIndicator = document.getElementById('typingIndicator');
+    
+    if (data.is_typing && data.user_type === 'visitor') {
+        typingIndicator.style.display = 'block';
+        scrollMessagesToBottom();
+        
+        // Hide after 3 seconds if no new typing event
+        clearTimeout(window.typingTimeout);
+        window.typingTimeout = setTimeout(() => {
+            typingIndicator.style.display = 'none';
+        }, 3000);
+    } else {
+        typingIndicator.style.display = 'none';
+    }
+}
+
+function endCurrentConversation() {
+    if (!currentConversationId) {
+        showNotification('Please select a conversation first', 'warning');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to end this conversation?')) {
+        fetch(`/chatbot/api/conversations/${currentConversationId}/end/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Conversation ended successfully', 'success');
+                removeConversation(currentConversationId);
+                clearChatInterface();
+            } else {
+                showNotification('Error ending conversation', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error ending conversation:', error);
+            showNotification('Error ending conversation', 'danger');
+        });
+    }
+}
+
+function refreshConversations() {
+    console.log('Refreshing conversations...');
+    window.location.reload();
+}
+
+function updateActiveConversationsCounter() {
+    const count = document.querySelectorAll('.conversation-item').length;
+    const counter = document.getElementById('conversationsCount');
+    if (counter) {
+        counter.textContent = count;
+    }
+}
+
+function setFormLoading(isLoading) {
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const sendButtonContent = document.getElementById('sendButtonContent');
+    const sendButtonLoading = document.getElementById('sendButtonLoading');
+    
+    messageInput.disabled = isLoading;
+    sendButton.disabled = isLoading;
+    
+    if (isLoading) {
+        sendButtonContent.style.display = 'none';
+        sendButtonLoading.style.display = 'inline';
+    } else {
+        sendButtonContent.style.display = 'inline';
+        sendButtonLoading.style.display = 'none';
+    }
+}
+
+function updateConnectionStatus(connected) {
+    const connectionIcon = document.getElementById('connectionIcon');
+    
+    if (connected) {
+        connectionIcon.className = 'fas fa-wifi text-success me-2';
+    } else {
+        connectionIcon.className = 'fas fa-wifi text-danger me-2';
+    }
+}
+
+function showConnectionToast(message, type) {
+    const toast = document.getElementById('connectionToast');
+    const messageEl = document.getElementById('connectionMessage');
+    const iconEl = document.getElementById('connectionIcon');
+    
+    messageEl.textContent = message;
+    
+    // Update icon based on type
+    switch(type) {
+        case 'success':
+            iconEl.className = 'fas fa-wifi text-success me-2';
+            break;
+        case 'warning':
+            iconEl.className = 'fas fa-exclamation-triangle text-warning me-2';
+            break;
+        case 'danger':
+            iconEl.className = 'fas fa-times-circle text-danger me-2';
+            break;
+        default:
+            iconEl.className = 'fas fa-info-circle text-info me-2';
+    }
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+function showNotification(message, type = 'info') {
+    const toast = document.getElementById('notificationToast');
+    const messageEl = document.getElementById('notificationMessage');
+    
+    messageEl.textContent = message;
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+function playNotificationSound() {
+    try {
+        // Create a simple notification sound
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+        console.log('Audio not available');
+    }
+}
+
+function scrollMessagesToBottom() {
+    const messagesContainer = document.getElementById('messagesContainer');
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

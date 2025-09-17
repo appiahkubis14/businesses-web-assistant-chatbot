@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Website - Chatbot Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Create New Website</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'dashboard:website_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>
+            Back to Websites
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-globe me-2"></i>
+                    Website Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Website Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" required 
+                                   placeholder="My Awesome Website">
+                            <div class="form-text">A friendly name for your website</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="url" class="form-label">Website URL *</label>
+                            <input type="url" class="form-control" id="url" name="url" required 
+                                   placeholder="https://example.com">
+                            <div class="form-text">The URL where the chatbot will be installed</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bot Configuration -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="bot_name" class="form-label">Bot Name</label>
+                            <input type="text" class="form-control" id="bot_name" name="bot_name" 
+                                   value="AI Assistant" placeholder="AI Assistant">
+                            <div class="form-text">The name displayed for your chatbot</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="theme" class="form-label">Theme</label>
+                            <select class="form-select" id="theme" name="theme">
+                                <option value="green" selected>Green</option>
+                                <option value="blue">Blue</option>
+                                <option value="purple">Purple</option>
+                                <option value="red">Red</option>
+                                <option value="orange">Orange</option>
+                            </select>
+                            <div class="form-text">Choose a color theme for your chatbot</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Welcome Message -->
+                    <div class="mb-3">
+                        <label for="welcome_message" class="form-label">Welcome Message</label>
+                        <textarea class="form-control" id="welcome_message" name="welcome_message" 
+                                  rows="3" placeholder="Hi! I'm your AI assistant. How can I help you today?">Hi! I'm your AI assistant. How can I help you today?</textarea>
+                        <div class="form-text">The first message visitors will see</div>
+                    </div>
+                    
+                    <!-- Position -->
+                    <div class="mb-4">
+                        <label for="position" class="form-label">Widget Position</label>
+                        <select class="form-select" id="position" name="position">
+                            <option value="bottom-right" selected>Bottom Right</option>
+                            <option value="bottom-left">Bottom Left</option>
+                            <option value="top-right">Top Right</option>
+                            <option value="top-left">Top Left</option>
+                        </select>
+                        <div class="form-text">Where the chatbot widget will appear on your website</div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'dashboard:website_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>
+                            Create Website
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Help Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Need Help?
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">After creating your website, you'll get:</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success me-2"></i>Installation code for your website</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Customizable chatbot appearance</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Real-time conversation monitoring</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Analytics and insights</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

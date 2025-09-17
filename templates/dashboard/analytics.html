@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+
+{% block title %}Analytics - Chatbot Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Analytics</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-calendar me-1"></i>
+                Last {{ days }} days
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="?days=7">Last 7 days</a></li>
+                <li><a class="dropdown-item" href="?days=30">Last 30 days</a></li>
+                <li><a class="dropdown-item" href="?days=90">Last 90 days</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-comments fa-2x mb-2"></i>
+                <h3 class="card-title">{{ total_conversations }}</h3>
+                <p class="card-text">Total Conversations</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card success">
+            <div class="card-body text-center">
+                <i class="fas fa-comment-dots fa-2x mb-2"></i>
+                <h3 class="card-title">{{ total_messages }}</h3>
+                <p class="card-text">Total Messages</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card warning">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                <h3 class="card-title">{{ daily_data|length }}</h3>
+                <p class="card-text">Days Tracked</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card info">
+            <div class="card-body text-center">
+                <i class="fas fa-globe fa-2x mb-2"></i>
+                <h3 class="card-title">{{ websites.count }}</h3>
+                <p class="card-text">Active Websites</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Conversations Over Time</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="conversationsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Messages Over Time</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="messagesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Website Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="websiteChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Website Breakdown -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Website Performance</h5>
+            </div>
+            <div class="card-body">
+                {% if websites %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Website</th>
+                                    <th>Theme</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for website in websites %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ website.name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ website.url|truncatechars:40 }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ website.theme }}">{{ website.theme }}</span>
+                                    </td>
+                                    <td>
+                                        {% if website.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ website.created_at|timesince }} ago
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'dashboard:website_detail' website.id %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'dashboard:website_edit' website.id %}" 
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No data to analyze</h5>
+                        <p class="text-muted">Create websites and start conversations to see analytics.</p>
+                        <a href="{% url 'dashboard:website_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Create Website
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Chart data from Django
+const dailyData = {{ daily_data|safe }};
+
+// Conversations over time chart
+const conversationsCtx = document.getElementById('conversationsChart').getContext('2d');
+const conversationsChart = new Chart(conversationsCtx, {
+    type: 'line',
+    data: {
+        labels: dailyData.map(d => d.date),
+        datasets: [{
+            label: 'Conversations',
+            data: dailyData.map(d => d.conversations),
+            borderColor: 'rgb(13, 110, 253)',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// Messages over time chart
+const messagesCtx = document.getElementById('messagesChart').getContext('2d');
+const messagesChart = new Chart(messagesCtx, {
+    type: 'bar',
+    data: {
+        labels: dailyData.map(d => d.date),
+        datasets: [{
+            label: 'Messages',
+            data: dailyData.map(d => d.messages),
+            backgroundColor: 'rgba(25, 135, 84, 0.8)',
+            borderColor: 'rgb(25, 135, 84)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// Website distribution chart
+const websiteCtx = document.getElementById('websiteChart').getContext('2d');
+const websiteChart = new Chart(websiteCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for website in websites %}'{{ website.name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for website in websites %}{{ website.conversations.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: [
+                'rgba(13, 110, 253, 0.8)',
+                'rgba(25, 135, 84, 0.8)',
+                'rgba(255, 193, 7, 0.8)',
+                'rgba(220, 53, 69, 0.8)',
+                'rgba(13, 202, 240, 0.8)',
+                'rgba(108, 117, 125, 0.8)'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

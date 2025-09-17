@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}Welcome - Chatbot Backend{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <div class="row align-items-center min-vh-100">
+        <div class="col-lg-6">
+            <div class="py-5">
+                <h1 class="display-4 fw-bold text-primary mb-4">
+                    Build Intelligent Chatbots
+                    <span class="text-success">Effortlessly</span>
+                </h1>
+                <p class="lead mb-4">
+                    Create, deploy, and manage AI-powered chatbots for your websites. 
+                    Get real-time analytics, live chat monitoring, and seamless integration.
+                </p>
+                
+                <div class="d-flex gap-3 mb-4">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'dashboard:dashboard' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-tachometer-alt me-2"></i>
+                            Go to Dashboard
+                        </a>
+                    {% else %}
+                        <a href="{% url 'dashboard:register' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>
+                            Get Started Free
+                        </a>
+                        <a href="{% url 'login' %}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            Sign In
+                        </a>
+                    {% endif %}
+                </div>
+                
+                {% if not user.is_authenticated %}
+                <div class="d-flex align-items-center text-muted">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <small>No credit card required • Free forever plan available</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="text-center">
+                <div class="card border-0 shadow-lg">
+                    <div class="card-body p-4">
+                        <div class="chatbot-demo">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-primary rounded-circle p-2 me-3">
+                                    <i class="fas fa-robot text-white"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">AI Assistant</h6>
+                                    <small class="text-success">
+                                        <i class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                                        Online
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="chat-messages" style="height: 250px; overflow-y: auto;">
+                                <div class="message-assistant mb-3">
+                                    Hi! I'm your AI assistant. How can I help you today?
+                                </div>
+                                <div class="message-user mb-3 ms-auto">
+                                    What services do you offer?
+                                </div>
+                                <div class="message-assistant mb-3">
+                                    I can help you with information about our products, answer questions, and guide you through our services. What would you like to know more about?
+                                </div>
+                            </div>
+                            
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Type your message..." disabled>
+                                <button class="btn btn-primary" type="button" disabled>
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Features Section -->
+    <div class="row py-5">
+        <div class="col-12 text-center mb-5">
+            <h2 class="display-5 fw-bold">Why Choose Our Platform?</h2>
+            <p class="lead text-muted">Everything you need to create and manage intelligent chatbots</p>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+                        <i class="fas fa-bolt text-primary fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Easy Integration</h5>
+                    <p class="card-text text-muted">
+                        Add our chatbot to any website with just a simple JavaScript snippet. 
+                        No complex setup required.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+                        <i class="fas fa-chart-line text-success fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Real-time Analytics</h5>
+                    <p class="card-text text-muted">
+                        Monitor conversations, track performance, and gain insights 
+                        with comprehensive analytics dashboard.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+                        <i class="fas fa-cog text-info fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Customizable</h5>
+                    <p class="card-text text-muted">
+                        Customize appearance, behavior, and AI responses to match 
+                        your brand and requirements perfectly.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CTA Section -->
+    {% if not user.is_authenticated %}
+    <div class="row py-5">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center p-5">
+                    <h3 class="card-title mb-3">Ready to Get Started?</h3>
+                    <p class="card-text mb-4">
+                        Join thousands of businesses using our platform to enhance customer engagement
+                    </p>
+                    <a href="{% url 'dashboard:register' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-rocket me-2"></i>
+                        Start Building Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chatbot-demo {
+        max-width: 400px;
+        margin: 0 auto;
+    }
+    
+    .chat-messages {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .message-assistant,
+    .message-user {
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+</style>
+{% endblock %}

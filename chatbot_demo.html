@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Widget Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .demo-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .feature h3 {
+            margin-top: 0;
+            color: #ffd700;
+        }
+        
+        .notice {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+        
+        .code-snippet {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            text-align: left;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Chatbot Widget Demo</h1>
+        <p class="subtitle">Experience our AI-powered chatbot in action!</p>
+        
+        <div class="demo-card">
+            <h2>Welcome to the Live Demo</h2>
+            <p>This page demonstrates the chatbot widget integration. Look for the chat bubble in the bottom-right corner!</p>
+            
+            <div class="notice">
+                <strong>💡 Try these sample questions:</strong><br>
+                • "Hello, how can you help me?"<br>
+                • "What services do you offer?"<br>
+                • "I need technical support"<br>
+                • "Can you tell me about your products?"
+            </div>
+        </div>
+        
+        <div class="features">
+            <div class="feature">
+                <h3>🎨 Customizable Design</h3>
+                <p>Choose from multiple themes, positions, and customization options to match your brand.</p>
+            </div>
+            
+            <div class="feature">
+                <h3>⚡ Real-time Chat</h3>
+                <p>Powered by WebSockets for instant messaging and live conversation monitoring.</p>
+            </div>
+            
+            <div class="feature">
+                <h3>📊 Analytics Dashboard</h3>
+                <p>Comprehensive analytics with conversation tracking, user insights, and performance metrics.</p>
+            </div>
+            
+            <div class="feature">
+                <h3>🤖 AI Integration</h3>
+                <p>Ready for OpenAI, Anthropic, and other AI providers with customizable responses.</p>
+            </div>
+        </div>
+        
+        <div class="demo-card">
+            <h3>Integration Code</h3>
+            <p>Add this simple code to any website to enable the chatbot:</p>
+            <div class="code-snippet">
+&lt;script&gt;
+    window.ChatBotConfig = {
+        websiteId: '83ea6d85-eccb-425e-9937-0fd4a52eee54',
+        apiUrl: 'http://172.20.10.2:5000',
+        botName: 'ShopBot',
+        theme: 'blue',
+        welcomeMessage: 'Welcome to our store! How can I help you find what you\'re looking for?'
+    };
+&lt;/script&gt;
+&lt;script src="http://172.20.10.2:5000/static/assets/js/chatbot-widget.js"&gt;&lt;/script&gt;
+            </div>
+        </div>
+        
+        <div class="demo-card">
+            <h3>🚀 Getting Started</h3>
+            <p>Visit the dashboard to create your own chatbot:</p>
+            <p><strong>Dashboard:</strong> <a href="http://172.20.10.2:5000/" style="color: #ffd700;">http://172.20.10.2:5000/</a></p>
+            <p><strong>Demo Login:</strong> demo / demo123</p>
+            <p><strong>Admin Panel:</strong> <a href="http://172.20.10.2:5000/admin/" style="color: #ffd700;">http://172.20.10.2:5000/admin/</a></p>
+            <p><strong>Admin Login:</strong> admin / admin123</p>
+        </div>
+    </div>
+    
+    <!-- Chatbot Widget -->
+     <link rel="stylesheet" href="http://172.20.10.2:5000/static/assets/css/ChatBotWidget.css">
+    <script>
+        window.ChatBotConfig = {
+            websiteId: '83ea6d85-eccb-425e-9937-0fd4a52eee54',
+            apiUrl: 'http://172.20.10.2:5000',
+            botName: 'ShopBot',
+            theme: 'blue',
+            position: 'bottom-right',
+            welcomeMessage: 'Welcome to our store! How can I help you find what you\'re looking for?',
+            enableSound: true,
+            showTypingIndicator: true,
+            showAvatar: true,
+            allowMinimize: true,
+            allowClose: true,
+            autoConnect: true
+        };
+    </script>
+    <script src="http://172.20.10.2:5000/static/assets/js/chatbot-widget.js"></script>
+</body>
+</html>

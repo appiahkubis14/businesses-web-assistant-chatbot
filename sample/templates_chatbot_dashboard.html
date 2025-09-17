@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Chatbot System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-tachometer-alt me-2"></i>
+        Dashboard Overview
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'chatbot:live-chat' %}" class="btn btn-primary">
+                <i class="fas fa-comments me-1"></i>
+                Live Chat
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Websites
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ websites.count }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-globe fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total Conversations
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ total_conversations }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-comments fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Active Conversations
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ active_conversations }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-comment-dots fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Needs Attention
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            <span id="needsAttentionCount">0</span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Websites List -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Your Websites</h6>
+                <div class="dropdown no-arrow">
+                    <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right shadow">
+                        <a class="dropdown-item" href="/admin/chatbot/website/add/">Add New Website</a>
+                        <a class="dropdown-item" href="/admin/chatbot/website/">Manage Websites</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if websites %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Domain</th>
+                                    <th>Theme</th>
+                                    <th>Status</th>
+                                    <th>Conversations</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for website in websites %}
+                                <tr>
+                                    <td>{{ website.name }}</td>
+                                    <td>
+                                        <a href="{{ website.domain }}" target="_blank" class="text-decoration-none">
+                                            {{ website.domain|truncatechars:30 }}
+                                            <i class="fas fa-external-link-alt fa-sm"></i>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ website.theme }}">
+                                            {{ website.get_theme_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if website.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ website.total_conversations }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="/admin/chatbot/website/{{ website.id }}/change/" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="/chatbot/api/websites/{{ website.id }}/conversations/" class="btn btn-sm btn-outline-info">
+                                                <i class="fas fa-comments"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-globe fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No websites configured</h5>
+                        <p class="text-muted">Add your first website to get started with the chatbot.</p>
+                        <a href="/admin/chatbot/website/add/" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Website
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'chatbot:live-chat' %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                <i class="fas fa-comments text-success me-2"></i>
+                                Live Chat Monitor
+                            </h6>
+                            <small class="text-muted">Real-time</small>
+                        </div>
+                        <p class="mb-1">Monitor and respond to live conversations</p>
+                    </a>
+                    
+                    <a href="/admin/chatbot/website/add/" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                <i class="fas fa-plus text-primary me-2"></i>
+                                Add Website
+                            </h6>
+                        </div>
+                        <p class="mb-1">Configure chatbot for a new website</p>
+                    </a>
+                    
+                    <a href="/admin/chatbot/conversation/" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                <i class="fas fa-history text-info me-2"></i>
+                                View All Conversations
+                            </h6>
+                        </div>
+                        <p class="mb-1">Browse conversation history and analytics</p>
+                    </a>
+                    
+                    <a href="/admin/" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                <i class="fas fa-cog text-secondary me-2"></i>
+                                Administration
+                            </h6>
+                        </div>
+                        <p class="mb-1">Advanced settings and configuration</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Integration Guide -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Integration Guide</h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <h6>How to add chatbot to your website:</h6>
+                    <ol>
+                        <li>Create a website in the admin panel</li>
+                        <li>Copy the website ID</li>
+                        <li>Add this code to your website:</li>
+                    </ol>
+                    
+                    <div class="bg-light p-2 mt-2 rounded">
+                        <code class="small">
+                            &lt;script src="http://172.20.10.2:5000/static/js/chatbot-widget.js"&gt;&lt;/script&gt;<br>
+                            &lt;script&gt;<br>
+                            window.ChatBotConfig = {<br>
+                            &nbsp;&nbsp;apiUrl: 'http://172.20.10.2:5000',<br>
+                            &nbsp;&nbsp;websiteId: 'YOUR_WEBSITE_ID'<br>
+                            };<br>
+                            &lt;/script&gt;
+                        </code>
+                    </div>
+                    
+                    <div class="mt-2">
+                        <a href="demo.html" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-play me-1"></i>
+                            View Demo
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Real-time Connection Status -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
+    <div class="toast" id="connectionToast" role="alert">
+        <div class="toast-header">
+            <i class="fas fa-wifi text-success me-2"></i>
+            <strong class="me-auto">System Status</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            Dashboard connected
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+
+.text-gray-300 {
+    color: #dddfeb !important;
+}
+
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+
+.shadow {
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+}
+
+.badge.bg-green {
+    background-color: #28a745 !important;
+}
+
+.badge.bg-blue {
+    background-color: #007bff !important;
+}
+
+.badge.bg-purple {
+    background-color: #6f42c1 !important;
+}
+
+.badge.bg-red {
+    background-color: #dc3545 !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show connection toast
+    const toast = new bootstrap.Toast(document.getElementById('connectionToast'));
+    toast.show();
+    
+    // Load conversations needing attention
+    loadNeedsAttentionCount();
+});
+
+function loadNeedsAttentionCount() {
+    fetch('/chatbot/api/dashboard/stats/')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('needsAttentionCount').textContent = data.conversations_needing_attention || 0;
+        })
+        .catch(error => {
+            console.error('Error loading stats:', error);
+        });
+}
+
+// Auto-refresh stats every 30 seconds
+setInterval(loadNeedsAttentionCount, 30000);
+</script>
+{% endblock %}

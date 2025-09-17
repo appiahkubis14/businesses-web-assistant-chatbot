@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ website.name }} - Chatbot Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        {{ website.name }}
+        {% if website.is_active %}
+            <span class="badge bg-success ms-2">Active</span>
+        {% else %}
+            <span class="badge bg-secondary ms-2">Inactive</span>
+        {% endif %}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'website_edit' website.id %}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i>
+                Edit
+            </a>
+            <button class="btn btn-outline-success" onclick="showInstallCode()">
+                <i class="fas fa-code me-1"></i>
+                Get Code
+            </button>
+        </div>
+        <a href="{% url 'website_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>
+            Back
+        </a>
+    </div>
+</div>
+
+<!-- Website Info -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Website Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <p><strong>URL:</strong> <a href="{{ website.url }}" target="_blank">{{ website.url }}</a></p>
+                        <p><strong>Bot Name:</strong> {{ website.bot_name }}</p>
+                        <p><strong>Theme:</strong> <span class="badge bg-{{ website.theme }}">{{ website.theme }}</span></p>
+                        <p><strong>Position:</strong> {{ website.get_position_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Configuration</h6>
+                        <p><strong>Sound:</strong> 
+                            {% if website.enable_sound %}
+                                <i class="fas fa-check text-success"></i> Enabled
+                            {% else %}
+                                <i class="fas fa-times text-danger"></i> Disabled
+                            {% endif %}
+                        </p>
+                        <p><strong>Avatar:</strong> 
+                            {% if website.show_avatar %}
+                                <i class="fas fa-check text-success"></i> Enabled
+                            {% else %}
+                                <i class="fas fa-times text-danger"></i> Disabled
+                            {% endif %}
+                        </p>
+                        <p><strong>Typing Indicator:</strong> 
+                            {% if website.show_typing_indicator %}
+                                <i class="fas fa-check text-success"></i> Enabled
+                            {% else %}
+                                <i class="fas fa-times text-danger"></i> Disabled
+                            {% endif %}
+                        </p>
+                        <p><strong>Created:</strong> {{ website.created_at|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <h6>Welcome Message</h6>
+                        <p class="text-muted">{{ website.welcome_message }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Today's Stats -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Today's Activity</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="row">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ today_stats.conversations }}</h4>
+                        <small class="text-muted">Conversations</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ today_stats.messages }}</h4>
+                        <small class="text-muted">Messages</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Stats -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">30-Day Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Total Conversations</span>
+                        <strong>{{ summary.total_conversations }}</strong>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Total Messages</span>
+                        <strong>{{ summary.total_messages }}</strong>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Unique Visitors</span>
+                        <strong>{{ summary.total_visitors }}</strong>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Avg. Response Time</span>
+                        <strong>{{ summary.avg_response_time|floatformat:0 }}ms</strong>
+                    </div>
+                </div>
+                <div>
+                    <div class="d-flex justify-content-between">
+                        <span>Bounce Rate</span>
+                        <strong>{{ summary.avg_bounce_rate|floatformat:1 }}%</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Conversations -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-comments me-2"></i>
+                    Recent Conversations
+                </h5>
+                <a href="{% url 'conversation_list' website.id %}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if conversations %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Started</th>
+                                    <th>Messages</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for conversation in conversations %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-user me-1"></i>
+                                        {{ conversation.user_identifier|default:"Anonymous" }}
+                                    </td>
+                                    <td>
+                                        {{ conversation.started_at|timesince }} ago
+                                        <br>
+                                        <small class="text-muted">{{ conversation.started_at|date:"M d, H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ conversation.total_messages }}</span>
+                                    </td>
+                                    <td>
+                                        {% if conversation.is_active %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-circle me-1"></i>Active
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Ended</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'conversation_detail' conversation.id %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if conversation.is_active %}
+                                            <a href="{% url 'end_conversation' conversation.id %}" 
+                                               class="btn btn-sm btn-outline-danger"
+                                               onclick="return confirm('End this conversation?')">
+                                                <i class="fas fa-stop"></i>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No conversations yet</h5>
+                        <p class="text-muted">Conversations will appear here when visitors start chatting.</p>
+                        <button class="btn btn-primary" onclick="showInstallCode()">
+                            <i class="fas fa-code me-1"></i>
+                            Get Installation Code
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Install Code Modal -->
+<div class="modal fade" id="installCodeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Installation Code</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">
+                    Copy and paste this code into your website's HTML, just before the closing <code>&lt;/body&gt;</code> tag:
+                </p>
+                <div class="widget-code" id="installCode">
+&lt;!-- Chatbot Widget --&gt;
+&lt;script&gt;
+    window.ChatBotConfig = {
+        websiteId: '{{ website.id }}',
+        apiUrl: 'http://172.20.10.2:5000'
+    };
+&lt;/script&gt;
+&lt;script src="http://172.20.10.2:5000/static/assets/js/chatbot-widget.js"&gt;&lt;/script&gt;
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-success" onclick="copyInstallCode()">
+                        <i class="fas fa-copy me-1"></i>
+                        Copy Code
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="testWidget()">
+                        <i class="fas fa-play me-1"></i>
+                        Test Widget
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note:</strong> Make sure to update the API URL to match your production domain before going live.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showInstallCode() {
+    const modal = new bootstrap.Modal(document.getElementById('installCodeModal'));
+    modal.show();
+}
+
+function copyInstallCode() {
+    const code = document.getElementById('installCode').textContent;
+    copyToClipboard(code);
+}
+
+function testWidget() {
+    // Load the chatbot widget for testing
+    if (window.ChatBotWidget) {
+        const config = {
+            websiteId: '{{ website.id }}',
+            apiUrl: 'http://172.20.10.2:5000',
+            botName: '{{ website.bot_name }}',
+            welcomeMessage: '{{ website.welcome_message|escapejs }}',
+            theme: '{{ website.theme }}',
+            position: '{{ website.position }}'
+        };
+        
+        window.initChatBot(config);
+    } else {
+        // Load the widget script
+        const script = document.createElement('script');
+        script.src = 'http://172.20.10.2:5000/static/assets/js/chatbot-widget.js';
+        script.onload = function() {
+            const config = {
+                websiteId: '{{ website.id }}',
+                apiUrl: 'http://172.20.10.2:5000',
+                botName: '{{ website.bot_name }}',
+                welcomeMessage: '{{ website.welcome_message|escapejs }}',
+                theme: '{{ website.theme }}',
+                position: '{{ website.position }}'
+            };
+            
+            window.ChatBotConfig = config;
+            window.initChatBot(config);
+        };
+        document.head.appendChild(script);
+    }
+}
+</script>
+{% endblock %}

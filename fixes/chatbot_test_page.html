@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .status {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .logs {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 20px;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #007cba;
+            color: white;
+        }
+        button:hover {
+            background: #005a87;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chatbot Fix Testing Page</h1>
+        
+        <div id="status" class="status">
+            <h3>Status: Initializing...</h3>
+            <p id="statusText">Loading chatbot widget...</p>
+        </div>
+
+        <div class="test-buttons">
+            <button onclick="testBasicMessage()">Test Basic Message</button>
+            <button onclick="testMultipleMessages()">Test Multiple Messages</button>
+            <button onclick="testWebSocketConnection()">Test WebSocket</button>
+            <button onclick="testErrorHandling()">Test Error Handling</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+            <button onclick="resetChatbot()">Reset Chatbot</button>
+        </div>
+
+        <div id="logs" class="logs"></div>
+
+        <div>
+            <h3>Test Instructions:</h3>
+            <ol>
+                <li><strong>Basic Message Test:</strong> Sends a test message and verifies response</li>
+                <li><strong>Multiple Messages:</strong> Sends several messages in sequence</li>
+                <li><strong>WebSocket Test:</strong> Checks WebSocket connection status</li>
+                <li><strong>Error Handling:</strong> Tests error scenarios</li>
+            </ol>
+            
+            <h3>Expected Behavior (Fixed):</h3>
+            <ul>
+                <li>✅ Messages appear immediately after sending</li>
+                <li>✅ Auto-response from bot appears within 1-2 seconds</li>
+                <li>✅ Typing indicator disappears after response</li>
+                <li>✅ Multiple messages can be sent without issues</li>
+                <li>✅ WebSocket connection shows as "Online"</li>
+                <li>✅ No console errors related to message handling</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Configure chatbot -->
+    <script>
+        window.ChatBotConfig = {
+            apiUrl: 'http://172.20.10.2:5000',
+            websiteId: 'test-website-uuid-12345', // Replace with actual UUID
+            theme: 'green',
+            position: 'bottom-right',
+            botName: 'Test Assistant',
+            welcomeMessage: "Hi! I'm your test assistant. Send me a message to test the fixes!",
+            enableSound: false, // Disable for testing
+            showTypingIndicator: true,
+            maxMessages: 50,
+            autoConnect: true,
+            showAvatar: true,
+            allowMinimize: true,
+            allowClose: true
+        };
+    </script>
+
+    <!-- Load the fixed chatbot widget -->
+    <script src="chatbot_widget_fixed.js"></script>
+
+    <script>
+        let logContainer, statusContainer, statusText;
+        let testResults = [];
+        let chatbotInstance;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            logContainer = document.getElementById('logs');
+            statusContainer = document.getElementById('status');
+            statusText = document.getElementById('statusText');
+
+            // Initialize chatbot
+            try {
+                chatbotInstance = window.initChatBot(window.ChatBotConfig);
+                log('✅ Chatbot initialized successfully');
+                updateStatus('success', 'Chatbot Ready', 'Chatbot widget loaded and ready for testing');
+                
+                // Test basic functionality after initialization
+                setTimeout(() => {
+                    checkChatbotStatus();
+                }, 2000);
+                
+            } catch (error) {
+                log('❌ Failed to initialize chatbot: ' + error.message);
+                updateStatus('error', 'Initialization Failed', error.message);
+            }
+        });
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logContainer.textContent += logEntry;
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(message);
+        }
+
+        function updateStatus(type, title, message) {
+            statusContainer.className = `status ${type}`;
+            statusContainer.querySelector('h3').textContent = `Status: ${title}`;
+            statusText.textContent = message;
+        }
+
+        function checkChatbotStatus() {
+            try {
+                if (chatbotInstance) {
+                    log('✅ Chatbot instance exists');
+                    log(`🔗 WebSocket connected: ${chatbotInstance.isConnected}`);
+                    log(`📝 Messages count: ${chatbotInstance.messages.length}`);
+                    log(`🏠 Website ID: ${chatbotInstance.websiteId}`);
+                    log(`💬 Conversation ID: ${chatbotInstance.conversationId || 'Not yet created'}`);
+                } else {
+                    log('❌ Chatbot instance not found');
+                }
+            } catch (error) {
+                log('❌ Error checking chatbot status: ' + error.message);
+            }
+        }
+
+        function testBasicMessage() {
+            log('\n🧪 Starting Basic Message Test...');
+            try {
+                if (!chatbotInstance) {
+                    log('❌ Chatbot not initialized');
+                    return;
+                }
+
+                // Open chatbot if closed
+                chatbotInstance.open();
+                log('📱 Opened chatbot widget');
+
+                // Simulate sending a message
+                setTimeout(() => {
+                    const input = document.getElementById('chatbot-input');
+                    if (input) {
+                        input.value = 'Hello! This is a test message.';
+                        log('✏️ Entered test message');
+                        
+                        // Trigger form submission
+                        const form = document.getElementById('chatbot-form');
+                        if (form) {
+                            form.dispatchEvent(new Event('submit'));
+                            log('📤 Submitted message form');
+                            
+                            // Check for response
+                            setTimeout(() => {
+                                const messageCount = chatbotInstance.messages.length;
+                                log(`📊 Total messages: ${messageCount}`);
+                                log(`🔄 Loading state: ${chatbotInstance.isLoading}`);
+                                
+                                if (!chatbotInstance.isLoading) {
+                                    log('✅ Basic Message Test: PASSED - Loading state cleared');
+                                } else {
+                                    log('❌ Basic Message Test: FAILED - Still in loading state');
+                                }
+                            }, 3000);
+                        } else {
+                            log('❌ Form not found');
+                        }
+                    } else {
+                        log('❌ Input field not found');
+                    }
+                }, 1000);
+
+            } catch (error) {
+                log('❌ Basic Message Test Error: ' + error.message);
+            }
+        }
+
+        function testMultipleMessages() {
+            log('\n🧪 Starting Multiple Messages Test...');
+            let messageCount = 0;
+            const maxMessages = 3;
+
+            function sendNextMessage() {
+                if (messageCount >= maxMessages) {
+                    log('✅ Multiple Messages Test: COMPLETED');
+                    return;
+                }
+
+                messageCount++;
+                const input = document.getElementById('chatbot-input');
+                const form = document.getElementById('chatbot-form');
+
+                if (input && form && !chatbotInstance.isLoading) {
+                    input.value = `Test message ${messageCount} of ${maxMessages}`;
+                    form.dispatchEvent(new Event('submit'));
+                    log(`📤 Sent message ${messageCount}/${maxMessages}`);
+                    
+                    // Wait for response before sending next
+                    setTimeout(sendNextMessage, 4000);
+                } else if (chatbotInstance.isLoading) {
+                    log(`⏳ Waiting for previous message to complete...`);
+                    setTimeout(sendNextMessage, 1000);
+                } else {
+                    log('❌ Cannot send message - form elements not found');
+                }
+            }
+
+            sendNextMessage();
+        }
+
+        function testWebSocketConnection() {
+            log('\n🧪 Starting WebSocket Connection Test...');
+            try {
+                if (chatbotInstance.socket) {
+                    log(`🔗 WebSocket state: ${chatbotInstance.socket.readyState}`);
+                    log(`🌐 WebSocket URL: ${chatbotInstance.socket.url}`);
+                    log(`✅ Connected: ${chatbotInstance.isConnected}`);
+                    
+                    // Send ping
+                    if (chatbotInstance.socket.readyState === WebSocket.OPEN) {
+                        chatbotInstance.socket.send(JSON.stringify({ type: 'ping' }));
+                        log('📡 Sent ping to server');
+                    }
+                } else {
+                    log('❌ WebSocket not initialized');
+                }
+            } catch (error) {
+                log('❌ WebSocket Test Error: ' + error.message);
+            }
+        }
+
+        function testErrorHandling() {
+            log('\n🧪 Starting Error Handling Test...');
+            try {
+                // Test with invalid message
+                if (chatbotInstance.socket && chatbotInstance.socket.readyState === WebSocket.OPEN) {
+                    chatbotInstance.socket.send('invalid json');
+                    log('📡 Sent invalid JSON to test error handling');
+                }
+                
+                // Test loading state reset
+                chatbotInstance.isLoading = true;
+                chatbotInstance.updateWidget();
+                log('🔄 Set loading state to true');
+                
+                setTimeout(() => {
+                    chatbotInstance.handleError('Test error message');
+                    log('💥 Triggered test error');
+                    
+                    setTimeout(() => {
+                        if (!chatbotInstance.isLoading) {
+                            log('✅ Error Handling Test: PASSED - Loading state reset');
+                        } else {
+                            log('❌ Error Handling Test: FAILED - Loading state not reset');
+                        }
+                    }, 1000);
+                }, 1000);
+                
+            } catch (error) {
+                log('❌ Error Handling Test Error: ' + error.message);
+            }
+        }
+
+        function clearLogs() {
+            logContainer.textContent = '';
+            log('🧹 Logs cleared');
+        }
+
+        function resetChatbot() {
+            log('\n🔄 Resetting chatbot...');
+            try {
+                if (chatbotInstance) {
+                    chatbotInstance.clearConversation();
+                    log('✅ Chatbot conversation cleared');
+                    updateStatus('warning', 'Reset Complete', 'Chatbot has been reset and is ready for testing');
+                }
+            } catch (error) {
+                log('❌ Reset Error: ' + error.message);
+            }
+        }
+
+        // Monitor chatbot events
+        setInterval(() => {
+            if (chatbotInstance) {
+                const connectionStatus = chatbotInstance.isConnected ? 'Connected' : 'Disconnected';
+                const loadingStatus = chatbotInstance.isLoading ? 'Loading' : 'Ready';
+                document.title = `Chatbot Test - ${connectionStatus} - ${loadingStatus}`;
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
