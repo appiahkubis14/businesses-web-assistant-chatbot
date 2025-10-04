@@ -1,291 +1,272 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard - Chatbot System{% endblock %}
+{% block title %}Live Chat - Chatbot Dashboard{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="fas fa-tachometer-alt me-2"></i>
-        Dashboard Overview
+        Live Chat Monitor
+        <span class="live-indicator ms-2"></span>
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
-            <a href="{% url 'dashboard:live-chat' %}" class="btn btn-primary">
-                <i class="fas fa-comments me-1"></i>
-                Live Chat
-            </a>
+            <button class="btn btn-outline-primary" onclick="refreshConversations()">
+                <i class="fas fa-sync-alt me-1"></i>
+                Refresh
+            </button>
         </div>
     </div>
 </div>
 
-<!-- Stats Cards -->
-<div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                            Total Websites
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            {{ websites.count }}
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-globe fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Total Conversations
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            {{ total_conversations }}
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-comments fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-info shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                            Active Conversations
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            {{ active_conversations }}
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-comment-dots fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                            Needs Attention
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            <span id="needsAttentionCount">0</span>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Websites List -->
 <div class="row">
-    <div class="col-lg-8">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 font-weight-bold text-primary">Your Websites</h6>
-                <div class="dropdown no-arrow">
-                    <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown">
-                        <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-right shadow">
-                        <a class="dropdown-item" href="/admin/chatbot/website/add/">Add New Website</a>
-                        <a class="dropdown-item" href="/admin/chatbot/website/">Manage Websites</a>
-                    </div>
-                </div>
+    <!-- Active Conversations List -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Active Conversations</h5>
+                <span class="badge bg-primary" id="conversationsCount">{{ active_conversations|length }}</span>
             </div>
-            <div class="card-body">
-                {% if websites %}
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Domain</th>
-                                    <th>Theme</th>
-                                    <th>Status</th>
-                                    <th>Conversations</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for website in websites %}
-                                <tr>
-                                    <td>{{ website.name }}</td>
-                                    <td>
-                                        <a href="{{ website.domain }}" target="_blank" class="text-decoration-none">
-                                            {{ website.domain|truncatechars:30 }}
-                                            <i class="fas fa-external-link-alt fa-sm"></i>
-                                        </a>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-{{ website.theme }}">
-                                            {{ website.get_theme_display }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if website.is_active %}
-                                            <span class="badge bg-success">Active</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">Inactive</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">{{ website.total_conversations }}</span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="/admin/chatbot/website/{{ website.id }}/change/" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <a href="/chatbot/api/websites/{{ website.id }}/conversations/" class="btn btn-sm btn-outline-info">
-                                                <i class="fas fa-comments"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="conversationsList">
+                    {% for conversation in active_conversations %}
+                    <a href="#" class="list-group-item list-group-item-action conversation-item {% if forloop.first %}active{% endif %}" 
+                       data-conversation-id="{{ conversation.id }}" onclick="selectConversation(this)">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ conversation.website.name }}</h6>
+                            <small>{{ conversation.started_at|timesince }} ago</small>
+                        </div>
+                        <p class="mb-1 text-truncate">
+                            {% with conversation.messages.last as last_message %}
+                                {% if last_message %}
+                                    <strong>{{ last_message.role|title }}:</strong> {{ last_message.content|truncatechars:50 }}
+                                {% else %}
+                                    No messages yet
+                                {% endif %}
+                            {% endwith %}
+                        </p>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">{{ conversation.user_identifier|default:"Anonymous" }}</small>
+                            <span class="badge {% if conversation.requires_attention %}bg-warning{% else %}bg-success{% endif %}">
+                                {{ conversation.total_messages }} msgs
+                            </span>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="text-center p-4" id="noConversationsMessage">
+                        <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No active conversations</p>
                     </div>
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-globe fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No websites configured</h5>
-                        <p class="text-muted">Add your first website to get started with the chatbot.</p>
-                        <a href="/admin/chatbot/website/add/" class="btn btn-primary">
-                            <i class="fas fa-plus me-1"></i>
-                            Add Website
-                        </a>
-                    </div>
-                {% endif %}
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
-    
-    <!-- Quick Actions -->
-    <div class="col-lg-4">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
-            </div>
-            <div class="card-body">
-                <div class="list-group list-group-flush">
-                    <a href="{% url 'dashboard:live-chat' %}" class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">
-                                <i class="fas fa-comments text-success me-2"></i>
-                                Live Chat Monitor
-                            </h6>
-                            <small class="text-muted">Real-time</small>
-                        </div>
-                        <p class="mb-1">Monitor and respond to live conversations</p>
-                    </a>
-                    
-                    <a href="/admin/chatbot/website/add/" class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">
-                                <i class="fas fa-plus text-primary me-2"></i>
-                                Add Website
-                            </h6>
-                        </div>
-                        <p class="mb-1">Configure chatbot for a new website</p>
-                    </a>
-                    
-                    <a href="/admin/chatbot/conversation/" class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">
-                                <i class="fas fa-history text-info me-2"></i>
-                                View All Conversations
-                            </h6>
-                        </div>
-                        <p class="mb-1">Browse conversation history and analytics</p>
-                    </a>
-                    
-                    <a href="/admin/" class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">
-                                <i class="fas fa-cog text-secondary me-2"></i>
-                                Administration
-                            </h6>
-                        </div>
-                        <p class="mb-1">Advanced settings and configuration</p>
-                    </a>
+
+    <!-- Chat Interface -->
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0" id="currentConversationTitle">
+                    {% if active_conversations %}
+                        {{ active_conversations.0.website.name }} - {{ active_conversations.0.user_identifier|default:"Anonymous" }}
+                    {% else %}
+                        Select a conversation
+                    {% endif %}
+                </h5>
+                <div class="d-flex align-items-center">
+                    <span class="badge me-2" id="conversationStatus">
+                        {% if active_conversations.0 %}
+                            {% if active_conversations.0.requires_attention %}
+                                <span class="badge bg-warning">Needs Attention</span>
+                            {% else %}
+                                <span class="badge bg-success">Active</span>
+                            {% endif %}
+                        {% endif %}
+                    </span>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="#" id="viewDetailsLink">
+                                    <i class="fas fa-eye me-2"></i>View Details
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="endCurrentConversation()">
+                                    <i class="fas fa-stop me-2"></i>End Conversation
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Integration Guide -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Integration Guide</h6>
-            </div>
-            <div class="card-body">
-                <div class="small">
-                    <h6>How to add chatbot to your website:</h6>
-                    <ol>
-                        <li>Create a website in the admin panel</li>
-                        <li>Copy the website ID</li>
-                        <li>Add this code to your website:</li>
-                    </ol>
-                    
-                    <div class="bg-light p-2 mt-2 rounded">
-                        <code class="small">
-                            &lt;script src="http://172.20.10.2:5000/static/js/chatbot-widget.js"&gt;&lt;/script&gt;<br>
-                            &lt;script&gt;<br>
-                            window.ChatBotConfig = {<br>
-                            &nbsp;&nbsp;apiUrl: 'http://172.20.10.2:5000',<br>
-                            &nbsp;&nbsp;websiteId: 'YOUR_WEBSITE_ID'<br>
-                            };<br>
-                            &lt;/script&gt;
-                        </code>
+            
+            <div class="card-body p-0 d-flex flex-column">
+                <!-- Messages Container -->
+                <div class="flex-grow-1 p-3" style="overflow-y: auto; max-height: 400px;" id="messagesContainer">
+                    {% if active_conversations %}
+                        <div id="messagesList">
+                            {% for message in active_conversations.0.messages.all %}
+                                <div class="d-flex mb-3 {% if message.role == 'user' %}justify-content-end{% else %}justify-content-start{% endif %}">
+                                    <div class="message-bubble {% if message.role == 'user' %}user-message{% else %}ai-message{% endif %}">
+                                        <div class="message-content">
+                                            {% if message.message_type == 'text' %}
+                                                {{ message.content }}
+                                            {% elif message.message_type == 'audio' %}
+                                                <div class="audio-message-container">
+                                                    <button class="audio-play-btn" data-audio-url="{{ message.file_url }}">
+                                                        <i class="fas fa-play"></i>
+                                                    </button>
+                                                    <div class="audio-waveform"></div>
+                                                    <span class="audio-duration">{{ message.duration|default:"0:00" }}</span>
+                                                </div>
+                                            {% elif message.message_type == 'file' %}
+                                                <div class="file-message-container">
+                                                    <div class="file-icon">
+                                                        {% if message.file_type|slice:":5" == "image" %}
+                                                            <i class="fas fa-image"></i>
+                                                        {% elif message.file_type|slice:":5" == "audio" %}
+                                                            <i class="fas fa-music"></i>
+                                                        {% elif message.file_type|slice:":5" == "video" %}
+                                                            <i class="fas fa-video"></i>
+                                                        {% else %}
+                                                            <i class="fas fa-file"></i>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="file-info">
+                                                        <div class="file-name">{{ message.file_name }}</div>
+                                                        <div class="file-size">{{ message.file_size|filesizeformat }}</div>
+                                                    </div>
+                                                    <a href="{{ message.file_url }}" class="file-download-btn" download>
+                                                        <i class="fas fa-download"></i>
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="message-time">
+                                            <small>{{ message.timestamp|time }}</small>
+                                            {% if message.role == 'assistant' and message.is_manual_response %}
+                                                <small class="ms-2"><i class="fas fa-user-tie" title="Manual response"></i></small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted" id="noMessagesPlaceholder">
+                            <i class="fas fa-comment-dots fa-3x mb-3"></i>
+                            <p>Select a conversation to view messages</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Typing Indicator -->
+                <div id="typingIndicator" class="px-3" style="display: none;">
+                    <div class="d-flex justify-content-start">
+                        <div class="message-bubble ai-message typing">
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Message Input - Enhanced -->
+                <div class="border-top p-3">
+                    <!-- Attached Files Preview -->
+                    <div id="attachedFilesPreview" class="attached-files-preview mb-2" style="display: none;">
+                        <!-- Files will be populated by JavaScript -->
                     </div>
                     
-                    <div class="mt-2">
-                        <a href="demo.html" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-play me-1"></i>
-                            View Demo
-                        </a>
-                    </div>
+                    <form id="messageForm" onsubmit="sendManualResponse(event)" enctype="multipart/form-data">
+                        <div class="input-group position-relative">
+                            <!-- Recording Timer -->
+                            <div id="recordingTimer" class="recording-timer" style="display: none;">
+                                <i class="fas fa-circle text-danger"></i>
+                                Recording: <span id="recordingDuration">0:00</span>
+                            </div>
+                            
+                            <!-- Main Input -->
+                            <textarea
+                                id="messageInput"
+                                class="form-control message-input-enhanced"
+                                placeholder="Type your response..."
+                                rows="1"
+                                style="resize: none; min-height: 40px; max-height: 120px;"
+                                {% if not active_conversations %}disabled{% endif %}
+                            ></textarea>
+                            
+                            <!-- Emoji Picker -->
+                            <div id="emojiPicker" class="emoji-picker" style="display: none;">
+                                <div class="emoji-picker-header">Choose an emoji</div>
+                                <div class="emoji-grid">
+                                    <!-- Emojis will be populated by JavaScript -->
+                                </div>
+                            </div>
+                            
+                            <!-- Input Controls -->
+                            <div class="input-controls">
+                                <button type="button" class="input-control-btn" id="emojiBtn" title="Add emoji">
+                                    <i class="fas fa-smile"></i>
+                                </button>
+                                <button type="button" class="input-control-btn" id="attachFileBtn" title="Attach file">
+                                    <i class="fas fa-paperclip"></i>
+                                </button>
+                                <button type="button" class="input-control-btn" id="recordVoiceBtn" title="Record voice message">
+                                    <i class="fas fa-microphone"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Send Button -->
+                            <button type="submit" class="btn btn-primary send-button" id="sendButton" {% if not active_conversations %}disabled{% endif %}>
+                                <span id="sendButtonContent">
+                                    <i class="fas fa-paper-plane"></i>
+                                </span>
+                                <span id="sendButtonLoading" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </span>
+                            </button>
+                        </div>
+                        
+                        <!-- Hidden File Input -->
+                        <input type="file" id="fileInput" class="d-none" multiple 
+                               accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt" />
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Real-time Connection Status -->
+<!-- Connection Status -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
     <div class="toast" id="connectionToast" role="alert">
         <div class="toast-header">
-            <i class="fas fa-wifi text-success me-2"></i>
-            <strong class="me-auto">System Status</strong>
+            <i class="fas fa-wifi text-success me-2" id="connectionIcon"></i>
+            <strong class="me-auto">Live Updates</strong>
             <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
         </div>
-        <div class="toast-body">
-            Dashboard connected
+        <div class="toast-body" id="connectionMessage">
+            Connecting to real-time updates...
+        </div>
+    </div>
+</div>
+
+<!-- Notification Toast -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1001;">
+    <div class="toast" id="notificationToast" role="alert">
+        <div class="toast-header">
+            <i class="fas fa-bell text-primary me-2"></i>
+            <strong class="me-auto">Notification</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="notificationMessage">
+            <!-- Notification content will be inserted here -->
         </div>
     </div>
 </div>
@@ -293,75 +274,1384 @@
 
 {% block extra_css %}
 <style>
-.border-left-primary {
-    border-left: 0.25rem solid #4e73df !important;
+.message-bubble {
+    max-width: 70%;
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    position: relative;
+    word-wrap: break-word;
 }
 
-.border-left-success {
-    border-left: 0.25rem solid #1cc88a !important;
+.user-message {
+    background-color: #007bff;
+    color: white;
+    border-bottom-right-radius: 0.25rem;
 }
 
-.border-left-info {
-    border-left: 0.25rem solid #36b9cc !important;
+.ai-message {
+    background-color: #f8f9fa;
+    color: #212529;
+    border-bottom-left-radius: 0.25rem;
+    border: 1px solid #e9ecef;
 }
 
-.border-left-warning {
-    border-left: 0.25rem solid #f6c23e !important;
+.message-content {
+    margin-bottom: 0.25rem;
+    line-height: 1.4;
 }
 
-.text-gray-300 {
-    color: #dddfeb !important;
+.message-time {
+    font-size: 0.7rem;
+    opacity: 0.8;
 }
 
-.text-gray-800 {
-    color: #5a5c69 !important;
+.conversation-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.shadow {
-    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+.conversation-item.active {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #007bff;
 }
 
-.badge.bg-green {
-    background-color: #28a745 !important;
+.conversation-item:hover {
+    background-color: #f8f9fa;
 }
 
-.badge.bg-blue {
-    background-color: #007bff !important;
+.live-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #28a745;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
 }
 
-.badge.bg-purple {
-    background-color: #6f42c1 !important;
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+    }
+    
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
 }
 
-.badge.bg-red {
-    background-color: #dc3545 !important;
+.typing-dots {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.typing-dots span {
+    height: 8px;
+    width: 8px;
+    background-color: #6c757d;
+    border-radius: 50%;
+    display: inline-block;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-dots span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes typing {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+#messagesContainer::-webkit-scrollbar {
+    width: 6px;
+}
+
+#messagesContainer::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#messagesContainer::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#messagesContainer::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Enhanced Input Styles */
+.message-input-enhanced {
+    border-radius: 20px 0 0 20px !important;
+    border-right: none !important;
+    padding-right: 120px !important; /* Space for controls */
+}
+
+.input-controls {
+    position: absolute;
+    right: 50px; /* Space for send button */
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+}
+
+.input-control-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: #6c757d;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.input-control-btn:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.input-control-btn.active {
+    background: #007bff;
+    color: white;
+}
+
+.input-control-btn.recording {
+    background: #dc3545;
+    color: white;
+    animation: pulse 1s infinite;
+}
+
+.send-button {
+    border-radius: 0 20px 20px 0 !important;
+    min-width: 50px;
+}
+
+/* Attached Files Preview */
+.attached-files-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.attached-file-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #e9ecef;
+    border: 1px solid #dee2e6;
+    border-radius: 15px;
+    padding: 4px 8px;
+    font-size: 12px;
+    max-width: 150px;
+}
+
+.attached-file-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.remove-file-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    color: #6c757d;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.remove-file-btn:hover {
+    background: #dee2e6;
+    color: #495057;
+}
+
+/* Audio Message Styles */
+.audio-message-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    min-width: 200px;
+}
+
+.audio-play-btn {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.audio-play-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.audio-waveform {
+    flex: 1;
+    height: 20px;
+    background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjIwIiB2aWV3Qm94PSIwIDAgMTAwIDIwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMCAxMEwxMCA1TDIwIDEyTDMwIDNMNDAgMTVMNTAgOEw2MCA2TDcwIDEzTDgwIDRMOTAgMTZMMTAwIDEwIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+Cjwvc3ZnPgo=') center/contain no-repeat;
+    opacity: 0.7;
+}
+
+.audio-duration {
+    font-size: 12px;
+    opacity: 0.8;
+    min-width: 35px;
+}
+
+/* File Message Styles */
+.file-message-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    min-width: 200px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.file-message-container:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.file-icon {
+    width: 36px;
+    height: 36px;
+    background: #6c757d;
+    color: white;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-size {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.file-download-btn {
+    color: inherit;
+    text-decoration: none;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.file-download-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: inherit;
+}
+
+/* Emoji Picker */
+.emoji-picker {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    width: 280px;
+    max-height: 200px;
+    z-index: 1000;
+    animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.emoji-picker-header {
+    padding: 8px 12px;
+    border-bottom: 1px solid #dee2e6;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    padding: 8px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.emoji-item {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s ease;
+}
+
+.emoji-item:hover {
+    background: #f8f9fa;
+}
+
+/* Recording Timer */
+.recording-timer {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    background: #dc3545;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    animation: slideUp 0.2s ease;
+}
+
+.recording-timer::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 8px;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #dc3545;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .message-bubble {
+        max-width: 85%;
+    }
+    
+    .input-controls {
+        right: 45px;
+        gap: 2px;
+    }
+    
+    .input-control-btn {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .message-input-enhanced {
+        padding-right: 100px !important;
+    }
+    
+    .emoji-picker {
+        width: 240px;
+    }
+    
+    .emoji-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
 }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// Global variables
+let currentConversationId = null;
+let wsConnection = null;
+let isConnected = false;
+let attachedFiles = [];
+let isRecording = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingStartTime = null;
+let recordingInterval = null;
+
+// Enhanced emojis array
+const commonEmojis = [
+    '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
+    '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
+    '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪',
+    '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨',
+    '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥',
+    '😔', '😕', '🙁', '😖', '😣', '😞', '😓', '😩',
+    '😫', '🥱', '😴', '😪', '😵', '🤯', '🥳', '🤓',
+    '😎', '🤩', '🥸', '🤗', '🫣', '🫥', '🫤', '🙄',
+    '👍', '👎', '👌', '🤝', '👏', '🙏', '💪', '✌️',
+    '❤️', '💙', '💚', '💛', '🧡', '💜', '🤍', '🖤',
+    '⭐', '✨', '🎉', '🎊', '🔥', '💯', '✅', '❌'
+];
+
+// Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    // Show connection toast
-    const toast = new bootstrap.Toast(document.getElementById('connectionToast'));
-    toast.show();
+    console.log('Initializing enhanced live chat dashboard...');
     
-    // Load conversations needing attention
-    loadNeedsAttentionCount();
+    // Initialize WebSocket connection
+    initWebSocket();
+    
+    // Set current conversation if available
+    const activeConversation = document.querySelector('.conversation-item.active');
+    if (activeConversation) {
+        currentConversationId = activeConversation.getAttribute('data-conversation-id');
+        console.log('Current conversation ID:', currentConversationId);
+    }
+    
+    // Initialize enhanced features
+    initEmojiPicker();
+    initFileAttachment();
+    initVoiceRecording();
+    initInputAutoResize();
+    
+    // Scroll to bottom of messages
+    scrollMessagesToBottom();
+    
+    // Show connection toast
+    showConnectionToast('Connecting to real-time updates...', 'info');
 });
 
-function loadNeedsAttentionCount() {
-    fetch('/chatbot/api/dashboard/stats/')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('needsAttentionCount').textContent = data.conversations_needing_attention || 0;
-        })
-        .catch(error => {
-            console.error('Error loading stats:', error);
-        });
+function initWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/dashboard/`;
+    
+    console.log('Connecting to WebSocket:', wsUrl);
+    
+    wsConnection = new WebSocket(wsUrl);
+    
+    wsConnection.onopen = function(event) {
+        console.log('Dashboard WebSocket connected');
+        isConnected = true;
+        updateConnectionStatus(true);
+        showConnectionToast('Connected to real-time updates', 'success');
+        
+        // Send subscription message for websites
+        wsConnection.send(JSON.stringify({
+            type: 'subscribe_websites',
+            website_ids: [] // Empty array will trigger auto-subscription
+        }));
+    };
+    
+    wsConnection.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            console.log('Dashboard WebSocket message:', data);
+            
+            handleWebSocketMessage(data);
+        } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+        }
+    };
+    
+    wsConnection.onclose = function(event) {
+        console.log('Dashboard WebSocket disconnected');
+        isConnected = false;
+        updateConnectionStatus(false);
+        showConnectionToast('Disconnected. Reconnecting...', 'warning');
+        
+        // Try to reconnect after 3 seconds
+        setTimeout(initWebSocket, 3000);
+    };
+    
+    wsConnection.onerror = function(error) {
+        console.error('Dashboard WebSocket error:', error);
+        isConnected = false;
+        updateConnectionStatus(false);
+        showConnectionToast('Connection error. Reconnecting...', 'danger');
+    };
 }
 
-// Auto-refresh stats every 30 seconds
-setInterval(loadNeedsAttentionCount, 30000);
+function handleWebSocketMessage(data) {
+    switch(data.type) {
+        case 'connection_established':
+            console.log('Dashboard connection confirmed');
+            break;
+            
+        case 'new_conversation':
+            console.log('New conversation:', data.conversation);
+            addNewConversation(data.conversation);
+            showNotification('New conversation started', 'info');
+            playNotificationSound();
+            break;
+            
+        case 'new_message':
+            console.log('New message:', data.message);
+            updateConversationMessage(data.conversation_id, data.message);
+            
+            // If this message is for the current conversation, display it immediately
+            if (currentConversationId == data.conversation_id) {
+                appendMessage(data.message);
+                scrollMessagesToBottom();
+            }
+            
+            // Show notification for new user messages
+            if (data.message.role === 'user') {
+                showNotification('New message from visitor', 'info');
+                playNotificationSound();
+            }
+            break;
+            
+        case 'conversation_ended':
+            console.log('Conversation ended:', data.conversation_id);
+            removeConversation(data.conversation_id);
+            
+            // If the ended conversation is the current one, clear the chat
+            if (currentConversationId == data.conversation_id) {
+                clearChatInterface();
+            }
+            showNotification('Conversation ended', 'warning');
+            break;
+            
+        case 'typing_indicator':
+            if (currentConversationId == data.conversation_id) {
+                handleTypingIndicator(data);
+            }
+            break;
+            
+        case 'error':
+            console.error('WebSocket error:', data.message);
+            showNotification('Error: ' + data.message, 'danger');
+            break;
+            
+        default:
+            console.log('Unknown message type:', data.type);
+    }
+}
+
+function initEmojiPicker() {
+    const emojiBtn = document.getElementById('emojiBtn');
+    const emojiPicker = document.getElementById('emojiPicker');
+    const emojiGrid = document.querySelector('.emoji-grid');
+    
+    // Populate emoji grid
+    emojiGrid.innerHTML = commonEmojis.map(emoji => 
+        `<button type="button" class="emoji-item" data-emoji="${emoji}">${emoji}</button>`
+    ).join('');
+    
+    // Toggle emoji picker
+    emojiBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    // Handle emoji selection
+    emojiGrid.addEventListener('click', function(e) {
+        if (e.target.classList.contains('emoji-item')) {
+            insertEmoji(e.target.dataset.emoji);
+        }
+    });
+    
+    // Close emoji picker when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#emojiPicker') && !e.target.closest('#emojiBtn')) {
+            emojiPicker.style.display = 'none';
+        }
+    });
+}
+
+function insertEmoji(emoji) {
+    const messageInput = document.getElementById('messageInput');
+    const start = messageInput.selectionStart;
+    const end = messageInput.selectionEnd;
+    const text = messageInput.value;
+    
+    messageInput.value = text.slice(0, start) + emoji + text.slice(end);
+    messageInput.setSelectionRange(start + emoji.length, start + emoji.length);
+    messageInput.focus();
+    
+    document.getElementById('emojiPicker').style.display = 'none';
+    autoResizeTextarea(messageInput);
+}
+
+function initFileAttachment() {
+    const attachFileBtn = document.getElementById('attachFileBtn');
+    const fileInput = document.getElementById('fileInput');
+    const attachedFilesPreview = document.getElementById('attachedFilesPreview');
+    
+    attachFileBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', function(e) {
+        handleFileSelection(e.target.files);
+    });
+}
+
+function handleFileSelection(files) {
+    for (let file of files) {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+            alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+            continue;
+        }
+        
+        if (attachedFiles.length >= 5) {
+            alert('Maximum 5 files can be attached at once.');
+            break;
+        }
+        
+        attachedFiles.push(file);
+    }
+    
+    updateAttachedFilesPreview();
+}
+
+function updateAttachedFilesPreview() {
+    const preview = document.getElementById('attachedFilesPreview');
+    
+    if (attachedFiles.length === 0) {
+        preview.style.display = 'none';
+        return;
+    }
+    
+    preview.style.display = 'block';
+    preview.innerHTML = attachedFiles.map((file, index) => `
+        <div class="attached-file-item">
+            <span class="attached-file-name" title="${file.name}">${file.name}</span>
+            <button type="button" class="remove-file-btn" onclick="removeAttachedFile(${index})" title="Remove file">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function removeAttachedFile(index) {
+    attachedFiles.splice(index, 1);
+    updateAttachedFilesPreview();
+}
+
+function initVoiceRecording() {
+    const recordVoiceBtn = document.getElementById('recordVoiceBtn');
+    
+    recordVoiceBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        toggleRecording();
+    });
+}
+
+async function toggleRecording() {
+    if (isRecording) {
+        await stopRecording();
+    } else {
+        await startRecording();
+    }
+}
+
+async function startRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        isRecording = true;
+        recordingStartTime = Date.now();
+        
+        const recordVoiceBtn = document.getElementById('recordVoiceBtn');
+        const recordingTimer = document.getElementById('recordingTimer');
+        
+        recordVoiceBtn.classList.add('recording');
+        recordVoiceBtn.innerHTML = '<i class="fas fa-stop"></i>';
+        recordingTimer.style.display = 'block';
+        
+        mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            handleAudioRecording(audioBlob);
+        };
+
+        mediaRecorder.start();
+        
+        // Update recording timer
+        recordingInterval = setInterval(updateRecordingTimer, 1000);
+        
+    } catch (error) {
+        console.error('Error starting recording:', error);
+        alert('Unable to access microphone. Please check your permissions.');
+    }
+}
+
+async function stopRecording() {
+    if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        isRecording = false;
+        
+        const recordVoiceBtn = document.getElementById('recordVoiceBtn');
+        const recordingTimer = document.getElementById('recordingTimer');
+        
+        recordVoiceBtn.classList.remove('recording');
+        recordVoiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        recordingTimer.style.display = 'none';
+        
+        if (recordingInterval) {
+            clearInterval(recordingInterval);
+            recordingInterval = null;
+        }
+    }
+}
+
+function updateRecordingTimer() {
+    if (!recordingStartTime) return;
+    
+    const seconds = Math.floor((Date.now() - recordingStartTime) / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    const duration = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    
+    document.getElementById('recordingDuration').textContent = duration;
+}
+
+function handleAudioRecording(audioBlob) {
+    // Convert blob to file and add to attachments
+    const audioFile = new File([audioBlob], `voice-${Date.now()}.wav`, { type: 'audio/wav' });
+    attachedFiles.push(audioFile);
+    updateAttachedFilesPreview();
+}
+
+function initInputAutoResize() {
+    const messageInput = document.getElementById('messageInput');
+    
+    messageInput.addEventListener('input', function() {
+        autoResizeTextarea(this);
+    });
+}
+
+function autoResizeTextarea(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+}
+
+function selectConversation(element) {
+    // Remove active class from all items
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Add active class to selected item
+    element.classList.add('active');
+    
+    // Update current conversation ID
+    currentConversationId = element.getAttribute('data-conversation-id');
+    console.log('Selected conversation:', currentConversationId);
+    
+    // Load conversation messages
+    loadConversationMessages(currentConversationId);
+    
+    // Update UI
+    updateChatInterface(element);
+    
+    // Enable message input
+    document.getElementById('messageInput').disabled = false;
+    document.getElementById('sendButton').disabled = false;
+}
+
+function loadConversationMessages(conversationId) {
+    console.log('Loading messages for conversation:', conversationId);
+    
+    fetch(`/api/conversations/${conversationId}/messages/`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.messages) {
+            displayMessages(data.messages);
+            scrollMessagesToBottom();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading messages:', error);
+        showNotification('Error loading messages', 'danger');
+    });
+}
+
+function displayMessages(messages) {
+    const messagesContainer = document.getElementById('messagesList');
+    if (!messagesContainer) {
+        // Create messages list if it doesn't exist
+        const container = document.getElementById('messagesContainer');
+        container.innerHTML = '<div id="messagesList"></div>';
+    }
+    
+    const messagesList = document.getElementById('messagesList');
+    messagesList.innerHTML = '';
+    
+    messages.forEach(message => {
+        appendMessage(message);
+    });
+}
+
+function appendMessage(message) {
+    const messagesList = document.getElementById('messagesList');
+    if (!messagesList) return;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `d-flex mb-3 ${message.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`;
+    
+    const bubbleClass = message.role === 'user' ? 'user-message' : 'ai-message';
+    const manualIcon = message.is_manual ? '<small class="ms-2"><i class="fas fa-user-tie" title="Manual response"></i></small>' : '';
+    
+    let messageContent = '';
+    
+    if (message.message_type === 'audio') {
+        messageContent = `
+            <div class="audio-message-container">
+                <button class="audio-play-btn" onclick="playAudio('${message.file_url}')">
+                    <i class="fas fa-play"></i>
+                </button>
+                <div class="audio-waveform"></div>
+                <span class="audio-duration">${message.duration || '0:00'}</span>
+            </div>
+        `;
+    } else if (message.message_type === 'file') {
+        const fileIcon = getFileIcon(message.file_type);
+        messageContent = `
+            <div class="file-message-container" onclick="downloadFile('${message.file_url}', '${message.file_name}')">
+                <div class="file-icon">${fileIcon}</div>
+                <div class="file-info">
+                    <div class="file-name">${message.file_name}</div>
+                    <div class="file-size">${formatFileSize(message.file_size)}</div>
+                </div>
+                <div class="file-download-btn">
+                    <i class="fas fa-download"></i>
+                </div>
+            </div>
+        `;
+    } else {
+        messageContent = escapeHtml(message.content);
+    }
+    
+    messageDiv.innerHTML = `
+        <div class="message-bubble ${bubbleClass}">
+            <div class="message-content">${messageContent}</div>
+            <div class="message-time">
+                <small>${formatTime(message.timestamp)}</small>
+                ${manualIcon}
+            </div>
+        </div>
+    `;
+    
+    messagesList.appendChild(messageDiv);
+}
+
+function getFileIcon(fileType) {
+    if (fileType && fileType.startsWith('image/')) return '<i class="fas fa-image"></i>';
+    if (fileType && fileType.startsWith('audio/')) return '<i class="fas fa-music"></i>';
+    if (fileType && fileType.startsWith('video/')) return '<i class="fas fa-video"></i>';
+    if (fileType && fileType.includes('pdf')) return '<i class="fas fa-file-pdf"></i>';
+    return '<i class="fas fa-file"></i>';
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function playAudio(url) {
+    const audio = new Audio(url);
+    audio.play().catch(error => {
+        console.error('Error playing audio:', error);
+    });
+}
+
+function downloadFile(url, fileName) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName || '';
+    link.click();
+}
+
+function sendManualResponse(event) {
+    event.preventDefault();
+    
+    if (!currentConversationId) {
+        showNotification('Please select a conversation first', 'warning');
+        return;
+    }
+    
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    const hasAttachedFiles = attachedFiles.length > 0;
+    
+    if (!message && !hasAttachedFiles) {
+        showNotification('Please enter a message or attach a file', 'warning');
+        return;
+    }
+    
+    // Disable form while sending
+    setFormLoading(true);
+    
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('conversation_id', currentConversationId);
+    formData.append('message', message);
+    
+    // Add files to form data
+    attachedFiles.forEach((file, index) => {
+        formData.append(`file_${index}`, file);
+    });
+    
+    // Send via WebSocket first for text messages
+    if (wsConnection && wsConnection.readyState === WebSocket.OPEN && !hasAttachedFiles) {
+        wsConnection.send(JSON.stringify({
+            type: 'send_message',
+            conversation_id: currentConversationId,
+            message: message
+        }));
+    }
+    
+    // Also send via HTTP (required for file uploads)
+    fetch('/api/send_manual_response/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Message sent successfully');
+            messageInput.value = '';
+            autoResizeTextarea(messageInput);
+            
+            // Clear attachments
+            attachedFiles = [];
+            updateAttachedFilesPreview();
+            
+            // Add message to current conversation display
+            const messageData = {
+                content: message,
+                role: 'assistant',
+                timestamp: new Date().toISOString(),
+                is_manual: true,
+                message_type: 'text'
+            };
+            
+            // Add file messages if any
+            if (data.files) {
+                data.files.forEach(fileData => {
+                    const fileMessage = {
+                        role: 'assistant',
+                        timestamp: new Date().toISOString(),
+                        is_manual: true,
+                        message_type: fileData.type.startsWith('audio/') ? 'audio' : 'file',
+                        file_name: fileData.name,
+                        file_size: fileData.size,
+                        file_type: fileData.type,
+                        file_url: fileData.url,
+                        duration: fileData.duration
+                    };
+                    appendMessage(fileMessage);
+                });
+            }
+            
+            if (message) {
+                appendMessage(messageData);
+            }
+            
+            scrollMessagesToBottom();
+            
+            // Update conversation list
+            updateConversationMessage(currentConversationId, messageData);
+        } else {
+            showNotification('Error sending message: ' + (data.error || 'Unknown error'), 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error sending message:', error);
+        showNotification('Error sending message', 'danger');
+    })
+    .finally(() => {
+        setFormLoading(false);
+    });
+}
+
+function addNewConversation(conversation) {
+    const conversationsList = document.getElementById('conversationsList');
+    const noConversationsMessage = document.getElementById('noConversationsMessage');
+    
+    // Remove "no conversations" message if it exists
+    if (noConversationsMessage) {
+        noConversationsMessage.remove();
+    }
+    
+    // Create new conversation item
+    const conversationItem = document.createElement('a');
+    conversationItem.href = '#';
+    conversationItem.className = 'list-group-item list-group-item-action conversation-item';
+    conversationItem.setAttribute('data-conversation-id', conversation.id);
+    conversationItem.onclick = function() { selectConversation(this); };
+    
+    conversationItem.innerHTML = `
+        <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1">${escapeHtml(conversation.website_name || 'Unknown Website')}</h6>
+            <small>just now</small>
+        </div>
+        <p class="mb-1 text-truncate">
+            New conversation started
+        </p>
+        <div class="d-flex justify-content-between">
+            <small class="text-muted">${escapeHtml(conversation.user_identifier || 'Anonymous')}</small>
+            <span class="badge bg-warning">0 msgs</span>
+        </div>
+    `;
+    
+    // Add to top of list
+    conversationsList.insertBefore(conversationItem, conversationsList.firstChild);
+    
+    // Update counter
+    updateActiveConversationsCounter();
+}
+
+function updateConversationMessage(conversationId, message) {
+    const conversationItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+    if (!conversationItem) return;
+    
+    // Update last message preview
+    const messagePreview = conversationItem.querySelector('p.mb-1');
+    if (messagePreview) {
+        const roleLabel = message.role === 'user' ? 'Visitor' : 'Agent';
+        let preview = '';
+        
+        if (message.message_type === 'audio') {
+            preview = '🎵 Voice message';
+        } else if (message.message_type === 'file') {
+            preview = '📎 ' + (message.file_name || 'File attachment');
+        } else {
+            preview = message.content && message.content.length > 50 ? 
+                message.content.substring(0, 50) + '...' : 
+                (message.content || 'New message');
+        }
+        
+        messagePreview.innerHTML = `<strong>${roleLabel}:</strong> ${escapeHtml(preview)}`;
+    }
+    
+    // Update message count badge
+    const badge = conversationItem.querySelector('.badge');
+    if (badge) {
+        const currentCount = parseInt(badge.textContent.split(' ')[0]) || 0;
+        badge.textContent = `${currentCount + 1} msgs`;
+        
+        // Update badge color based on role
+        badge.className = message.role === 'user' ? 'badge bg-warning' : 'badge bg-success';
+    }
+    
+    // Update timestamp
+    const timeElement = conversationItem.querySelector('small');
+    if (timeElement) {
+        timeElement.textContent = 'just now';
+    }
+    
+    // Move conversation to top of list
+    const conversationsList = document.getElementById('conversationsList');
+    conversationsList.insertBefore(conversationItem, conversationsList.firstChild);
+}
+
+function removeConversation(conversationId) {
+    const conversationItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+    if (conversationItem) {
+        conversationItem.remove();
+        updateActiveConversationsCounter();
+        
+        // If no conversations left, show placeholder
+        const conversationsList = document.getElementById('conversationsList');
+        if (conversationsList.children.length === 0) {
+            conversationsList.innerHTML = `
+                <div class="text-center p-4" id="noConversationsMessage">
+                    <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                    <p class="text-muted">No active conversations</p>
+                </div>
+            `;
+        }
+    }
+}
+
+function clearChatInterface() {
+    currentConversationId = null;
+    document.getElementById('currentConversationTitle').textContent = 'Select a conversation';
+    document.getElementById('conversationStatus').innerHTML = '';
+    
+    const messagesContainer = document.getElementById('messagesContainer');
+    messagesContainer.innerHTML = `
+        <div class="text-center py-5 text-muted" id="noMessagesPlaceholder">
+            <i class="fas fa-comment-dots fa-3x mb-3"></i>
+            <p>Select a conversation to view messages</p>
+        </div>
+    `;
+    
+    // Disable message input
+    document.getElementById('messageInput').disabled = true;
+    document.getElementById('sendButton').disabled = true;
+    
+    // Clear attachments
+    attachedFiles = [];
+    updateAttachedFilesPreview();
+}
+
+function updateChatInterface(conversationElement) {
+    // Update title
+    const websiteName = conversationElement.querySelector('h6').textContent;
+    const userIdentifier = conversationElement.querySelector('.text-muted').textContent;
+    document.getElementById('currentConversationTitle').textContent = `${websiteName} - ${userIdentifier}`;
+    
+    // Update status badge
+    const badge = conversationElement.querySelector('.badge');
+    const isWarning = badge.classList.contains('bg-warning');
+    const statusHtml = isWarning ? 
+        '<span class="badge bg-warning">Needs Attention</span>' : 
+        '<span class="badge bg-success">Active</span>';
+    document.getElementById('conversationStatus').innerHTML = statusHtml;
+}
+
+function handleTypingIndicator(data) {
+    const typingIndicator = document.getElementById('typingIndicator');
+    
+    if (data.is_typing && data.user_type === 'visitor') {
+        typingIndicator.style.display = 'block';
+        scrollMessagesToBottom();
+        
+        // Hide after 3 seconds if no new typing event
+        clearTimeout(window.typingTimeout);
+        window.typingTimeout = setTimeout(() => {
+            typingIndicator.style.display = 'none';
+        }, 3000);
+    } else {
+        typingIndicator.style.display = 'none';
+    }
+}
+
+function endCurrentConversation() {
+    if (!currentConversationId) {
+        showNotification('Please select a conversation first', 'warning');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to end this conversation?')) {
+        fetch(`/api/conversations/${currentConversationId}/end/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Conversation ended successfully', 'success');
+                removeConversation(currentConversationId);
+                clearChatInterface();
+            } else {
+                showNotification('Error ending conversation', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error ending conversation:', error);
+            showNotification('Error ending conversation', 'danger');
+        });
+    }
+}
+
+function refreshConversations() {
+    console.log('Refreshing conversations...');
+    window.location.reload();
+}
+
+function updateActiveConversationsCounter() {
+    const count = document.querySelectorAll('.conversation-item').length;
+    const counter = document.getElementById('conversationsCount');
+    if (counter) {
+        counter.textContent = count;
+    }
+}
+
+function setFormLoading(isLoading) {
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const sendButtonContent = document.getElementById('sendButtonContent');
+    const sendButtonLoading = document.getElementById('sendButtonLoading');
+    
+    messageInput.disabled = isLoading;
+    sendButton.disabled = isLoading;
+    
+    if (isLoading) {
+        sendButtonContent.style.display = 'none';
+        sendButtonLoading.style.display = 'inline';
+    } else {
+        sendButtonContent.style.display = 'inline';
+        sendButtonLoading.style.display = 'none';
+    }
+}
+
+function updateConnectionStatus(connected) {
+    const connectionIcon = document.getElementById('connectionIcon');
+    
+    if (connected) {
+        connectionIcon.className = 'fas fa-wifi text-success me-2';
+    } else {
+        connectionIcon.className = 'fas fa-wifi text-danger me-2';
+    }
+}
+
+function showConnectionToast(message, type) {
+    const toast = document.getElementById('connectionToast');
+    const messageEl = document.getElementById('connectionMessage');
+    const iconEl = document.getElementById('connectionIcon');
+    
+    messageEl.textContent = message;
+    
+    // Update icon based on type
+    switch(type) {
+        case 'success':
+            iconEl.className = 'fas fa-wifi text-success me-2';
+            break;
+        case 'warning':
+            iconEl.className = 'fas fa-exclamation-triangle text-warning me-2';
+            break;
+        case 'danger':
+            iconEl.className = 'fas fa-times-circle text-danger me-2';
+            break;
+        default:
+            iconEl.className = 'fas fa-info-circle text-info me-2';
+    }
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+function showNotification(message, type = 'info') {
+    const toast = document.getElementById('notificationToast');
+    const messageEl = document.getElementById('notificationMessage');
+    
+    messageEl.textContent = message;
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+function playNotificationSound() {
+    try {
+        // Create a simple notification sound
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+        console.log('Audio not available');
+    }
+}
+
+function scrollMessagesToBottom() {
+    const messagesContainer = document.getElementById('messagesContainer');
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 </script>
 {% endblock %}

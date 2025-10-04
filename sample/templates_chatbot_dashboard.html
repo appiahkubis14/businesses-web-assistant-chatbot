@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadNeedsAttentionCount() {
-    fetch('/chatbot/api/dashboard/stats/')
+    fetch('/api/dashboard/stats/')
         .then(response => response.json())
         .then(data => {
             document.getElementById('needsAttentionCount').textContent = data.conversations_needing_attention || 0;

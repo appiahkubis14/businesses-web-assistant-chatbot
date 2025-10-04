@@ -1,7 +1,5 @@
 {% extends 'base.html' %}
-
 {% block title %}Live Chat - Chatbot Dashboard{% endblock %}
-
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
@@ -17,7 +15,6 @@
         </div>
     </div>
 </div>
-
 <div class="row">
     <!-- Active Conversations List -->
     <div class="col-md-4">
@@ -61,7 +58,6 @@
             </div>
         </div>
     </div>
-
     <!-- Chat Interface -->
     <div class="col-md-8">
         <div class="card h-100">
@@ -111,7 +107,32 @@
                             {% for message in active_conversations.0.messages.all %}
                                 <div class="d-flex mb-3 {% if message.role == 'user' %}justify-content-end{% else %}justify-content-start{% endif %}">
                                     <div class="message-bubble {% if message.role == 'user' %}user-message{% else %}ai-message{% endif %}">
-                                        <div class="message-content">{{ message.content }}</div>
+                                        <div class="message-content">
+                                            {% if message.message_type == 'audio' %}
+                                                <div class="audio-message">
+                                                    <i class="fas fa-microphone me-2"></i>
+                                                    <span>Voice message</span>
+                                                    <audio controls class="mt-2">
+                                                        <source src="{{ message.file_url }}" type="audio/wav">
+                                                        Your browser does not support the audio element.
+                                                    </audio>
+                                                </div>
+                                            {% elif message.message_type == 'file' %}
+                                                <div class="file-message">
+                                                    <i class="fas fa-paperclip me-2"></i>
+                                                    <a href="{{ message.file_url }}" target="_blank" class="text-decoration-none">
+                                                        {{ message.file_name|default:"File" }}
+                                                    </a>
+                                                    <small class="d-block text-muted">{{ message.file_size|filesizeformat }}</small>
+                                                </div>
+                                            {% elif message.message_type == 'image' %}
+                                                <div class="image-message">
+                                                    <img src="{{ message.file_url }}" alt="Image" class="img-fluid rounded" style="max-width: 200px; cursor: pointer;" onclick="openImageModal('{{ message.file_url }}')">
+                                                </div>
+                                            {% else %}
+                                                {{ message.content }}
+                                            {% endif %}
+                                        </div>
                                         <div class="message-time">
                                             <small>{{ message.timestamp|time }}</small>
                                             {% if message.role == 'assistant' and message.is_manual_response %}
@@ -143,28 +164,89 @@
                     </div>
                 </div>
                 
+                <!-- File Preview -->
+                <div id="filePreview" class="px-3" style="display: none;">
+                    <div class="file-preview-container">
+                        <div class="file-preview-list" id="filePreviewList">
+                            <!-- File previews will be added here -->
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Message Input -->
                 <div class="border-top p-3">
                     <form id="messageForm" onsubmit="sendManualResponse(event)">
-                        <div class="input-group">
-                            <input type="text" class="form-control" placeholder="Type your response..." id="messageInput" 
-                                {% if not active_conversations %}disabled{% endif %}>
-                            <button class="btn btn-primary" type="submit" id="sendButton" {% if not active_conversations %}disabled{% endif %}>
+                        <div class="input-group align-items-end">
+                            <div class="input-wrapper flex-grow-1">
+                                <textarea class="form-control message-input" placeholder="Type your response..." id="messageInput" 
+                                    rows="1" {% if not active_conversations %}disabled{% endif %}></textarea>
+                                
+                                <!-- Emoji Picker -->
+                                <div class="emoji-picker" id="emojiPicker" style="display: none;">
+                                    <div class="emoji-categories">
+                                        <button type="button" class="emoji-category-btn active" data-category="smileys">😀</button>
+                                        <button type="button" class="emoji-category-btn" data-category="gestures">👍</button>
+                                        <button type="button" class="emoji-category-btn" data-category="hearts">❤️</button>
+                                        <button type="button" class="emoji-category-btn" data-category="symbols">⭐</button>
+                                    </div>
+                                    <div class="emoji-grid" id="emojiGrid">
+                                        <!-- Emojis will be loaded here -->
+                                    </div>
+                                </div>
+                                
+                                <!-- Recording Timer -->
+                                <div class="recording-timer" id="recordingTimer" style="display: none;">
+                                    <span class="recording-dot"></span>
+                                    <span id="recordingTime">0:00</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Input Controls -->
+                            <div class="input-controls ms-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm input-control-btn" id="emojiBtn" title="Add emoji" onclick="toggleEmojiPicker()">
+                                    <i class="fas fa-smile"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm input-control-btn" id="fileBtn" title="Attach file" onclick="openFileDialog()">
+                                    <i class="fas fa-paperclip"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm input-control-btn" id="voiceBtn" title="Record voice" onclick="toggleVoiceRecording()">
+                                    <i class="fas fa-microphone" id="voiceIcon"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Send Button -->
+                            <button class="btn btn-primary ms-2" type="submit" id="sendButton" {% if not active_conversations %}disabled{% endif %}>
                                 <span id="sendButtonContent">
-                                    <i class="fas fa-paper-plane"></i> Send
+                                    <i class="fas fa-paper-plane"></i>
                                 </span>
                                 <span id="sendButtonLoading" style="display: none;">
-                                    <i class="fas fa-spinner fa-spin"></i> Sending...
+                                    <i class="fas fa-spinner fa-spin"></i>
                                 </span>
                             </button>
                         </div>
+                        
+                        <!-- Hidden File Input -->
+                        <input type="file" id="fileInput" multiple accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt" style="display: none;">
                     </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Image Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" alt="Image Preview" class="img-fluid">
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Connection Status -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
     <div class="toast" id="connectionToast" role="alert">
@@ -178,7 +260,6 @@
         </div>
     </div>
 </div>
-
 <!-- Notification Toast -->
 <div class="position-fixed top-0 end-0 p-3" style="z-index: 1001;">
     <div class="toast" id="notificationToast" role="alert">
@@ -193,7 +274,6 @@
     </div>
 </div>
 {% endblock %}
-
 {% block extra_css %}
 <style>
 .message-bubble {
@@ -203,44 +283,36 @@
     position: relative;
     word-wrap: break-word;
 }
-
 .user-message {
     background-color: #007bff;
     color: white;
     border-bottom-right-radius: 0.25rem;
 }
-
 .ai-message {
     background-color: #f8f9fa;
     color: #212529;
     border-bottom-left-radius: 0.25rem;
     border: 1px solid #e9ecef;
 }
-
 .message-content {
     margin-bottom: 0.25rem;
     line-height: 1.4;
 }
-
 .message-time {
     font-size: 0.7rem;
     opacity: 0.8;
 }
-
 .conversation-item {
     cursor: pointer;
     transition: all 0.2s ease;
 }
-
 .conversation-item.active {
     background-color: #e3f2fd !important;
     border-left: 4px solid #007bff;
 }
-
 .conversation-item:hover {
     background-color: #f8f9fa;
 }
-
 .live-indicator {
     display: inline-block;
     width: 8px;
@@ -249,7 +321,6 @@
     border-radius: 50%;
     animation: pulse 2s infinite;
 }
-
 @keyframes pulse {
     0% {
         transform: scale(0.95);
@@ -266,13 +337,11 @@
         box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
     }
 }
-
 .typing-dots {
     display: flex;
     align-items: center;
     gap: 4px;
 }
-
 .typing-dots span {
     height: 8px;
     width: 8px;
@@ -281,15 +350,12 @@
     display: inline-block;
     animation: typing 1.4s infinite ease-in-out;
 }
-
 .typing-dots span:nth-child(1) {
     animation-delay: -0.32s;
 }
-
 .typing-dots span:nth-child(2) {
     animation-delay: -0.16s;
 }
-
 @keyframes typing {
     0%, 80%, 100% {
         transform: scale(0.8);
@@ -300,37 +366,296 @@
         opacity: 1;
     }
 }
-
 #messagesContainer::-webkit-scrollbar {
     width: 6px;
 }
-
 #messagesContainer::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 3px;
 }
-
 #messagesContainer::-webkit-scrollbar-thumb {
     background: #c1c1c1;
     border-radius: 3px;
 }
-
 #messagesContainer::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+/* Enhanced Input Styles */
+.input-wrapper {
+    position: relative;
+}
+.message-input {
+    border-radius: 20px;
+    border: 1px solid #dee2e6;
+    resize: none;
+    transition: all 0.2s ease;
+    min-height: 40px;
+    max-height: 120px;
+    padding: 8px 16px;
+}
+.message-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+.input-controls {
+    display: flex;
+    gap: 4px;
+}
+.input-control-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.input-control-btn:hover {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+.input-control-btn.active {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+.input-control-btn.recording {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+    animation: pulse 1s infinite;
+}
+/* Emoji Picker Styles */
+.emoji-picker {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: 320px;
+    height: 220px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    overflow: hidden;
+    animation: slideUp 0.2s ease;
+}
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.emoji-categories {
+    display: flex;
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+}
+.emoji-category-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s ease;
+}
+.emoji-category-btn:hover {
+    background: #e9ecef;
+}
+.emoji-category-btn.active {
+    background: #007bff;
+    color: white;
+}
+.emoji-grid {
+    padding: 8px;
+    height: calc(100% - 45px);
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+}
+.emoji-item {
+    width: 32px;
+    height: 32px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.emoji-item:hover {
+    background: #f8f9fa;
+    transform: scale(1.1);
+}
+/* Recording Timer Styles */
+.recording-timer {
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #dc3545;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    animation: slideUp 0.2s ease;
+}
+.recording-timer::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #dc3545;
+}
+.recording-dot {
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+}
+/* File Preview Styles */
+.file-preview-container {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 8px;
+}
+.file-preview-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    background: white;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    border: 1px solid #dee2e6;
+}
+.file-preview-item:last-child {
+    margin-bottom: 0;
+}
+.file-preview-icon {
+    width: 32px;
+    height: 32px;
+    background: #007bff;
+    color: white;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+.file-preview-info {
+    flex: 1;
+}
+.file-preview-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    color: #495057;
+}
+.file-preview-size {
+    font-size: 11px;
+    color: #6c757d;
+}
+.file-preview-remove {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+.file-preview-remove:hover {
+    background: #f5c6cb;
+}
+/* Audio and File Message Styles */
+.audio-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.audio-message audio {
+    max-width: 200px;
+}
+.file-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.file-message a {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 500;
+}
+.file-message a:hover {
+    text-decoration: underline;
+}
+.image-message img {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+.image-message img:hover {
+    transform: scale(1.02);
+}
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .emoji-picker {
+        width: 280px;
+        height: 200px;
+    }
+    
+    .input-controls {
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .input-control-btn {
+        width: 32px;
+        height: 32px;
+    }
+}
 </style>
 {% endblock %}
-
 {% block extra_js %}
 <script>
 // Global variables
 let currentConversationId = null;
 let wsConnection = null;
 let isConnected = false;
-
+let isRecording = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingStartTime = null;
+let recordingTimer = null;
+let selectedFiles = [];
+// Emoji data
+const emojiData = {
+    'smileys': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳'],
+    'gestures': ['👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👋', '🤚', '🖐️', '✋', '🖖', '👏', '🙌', '🤲', '🤝', '🙏'],
+    'hearts': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟'],
+    'symbols': ['✅', '❌', '⭐', '💯', '🔥', '⚡', '💥', '💢', '💦', '💨', '🎉', '🎊', '🎈', '🎁', '🏆', '🥇', '🥈', '🥉']
+};
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing live chat dashboard...');
+    console.log('Initializing enhanced live chat dashboard...');
     
     // Initialize WebSocket connection
     initWebSocket();
@@ -342,13 +667,21 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Current conversation ID:', currentConversationId);
     }
     
+    // Initialize emoji picker
+    initializeEmojiPicker();
+    
+    // Setup auto-resize for textarea
+    setupTextareaAutoResize();
+    
+    // Setup file input handler
+    setupFileInput();
+    
     // Scroll to bottom of messages
     scrollMessagesToBottom();
     
     // Show connection toast
     showConnectionToast('Connecting to real-time updates...', 'info');
 });
-
 function initWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/dashboard/`;
@@ -398,7 +731,6 @@ function initWebSocket() {
         showConnectionToast('Connection error. Reconnecting...', 'danger');
     };
 }
-
 function handleWebSocketMessage(data) {
     switch(data.type) {
         case 'connection_established':
@@ -455,7 +787,6 @@ function handleWebSocketMessage(data) {
             console.log('Unknown message type:', data.type);
     }
 }
-
 function selectConversation(element) {
     // Remove active class from all items
     document.querySelectorAll('.conversation-item').forEach(item => {
@@ -478,8 +809,10 @@ function selectConversation(element) {
     // Enable message input
     document.getElementById('messageInput').disabled = false;
     document.getElementById('sendButton').disabled = false;
+    document.getElementById('emojiBtn').disabled = false;
+    document.getElementById('fileBtn').disabled = false;
+    document.getElementById('voiceBtn').disabled = false;
 }
-
 function loadConversationMessages(conversationId) {
     console.log('Loading messages for conversation:', conversationId);
     
@@ -502,7 +835,6 @@ function loadConversationMessages(conversationId) {
         showNotification('Error loading messages', 'danger');
     });
 }
-
 function displayMessages(messages) {
     const messagesContainer = document.getElementById('messagesList');
     if (!messagesContainer) {
@@ -518,7 +850,6 @@ function displayMessages(messages) {
         appendMessage(message);
     });
 }
-
 function appendMessage(message) {
     const messagesList = document.getElementById('messagesList');
     if (!messagesList) return;
@@ -529,9 +860,43 @@ function appendMessage(message) {
     const bubbleClass = message.role === 'user' ? 'user-message' : 'ai-message';
     const manualIcon = message.is_manual ? '<small class="ms-2"><i class="fas fa-user-tie" title="Manual response"></i></small>' : '';
     
+    let messageContent = '';
+    
+    // Handle different message types
+    if (message.message_type === 'audio') {
+        messageContent = `
+            <div class="audio-message">
+                <i class="fas fa-microphone me-2"></i>
+                <span>Voice message</span>
+                <audio controls class="mt-2">
+                    <source src="${message.file_url}" type="audio/wav">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+        `;
+    } else if (message.message_type === 'file') {
+        messageContent = `
+            <div class="file-message">
+                <i class="fas fa-paperclip me-2"></i>
+                <a href="${message.file_url}" target="_blank" class="text-decoration-none">
+                    ${message.file_name || 'File'}
+                </a>
+                ${message.file_size ? `<small class="d-block text-muted">${formatFileSize(message.file_size)}</small>` : ''}
+            </div>
+        `;
+    } else if (message.message_type === 'image') {
+        messageContent = `
+            <div class="image-message">
+                <img src="${message.file_url}" alt="Image" class="img-fluid rounded" style="max-width: 200px; cursor: pointer;" onclick="openImageModal('${message.file_url}')">
+            </div>
+        `;
+    } else {
+        messageContent = escapeHtml(message.content);
+    }
+    
     messageDiv.innerHTML = `
         <div class="message-bubble ${bubbleClass}">
-            <div class="message-content">${escapeHtml(message.content)}</div>
+            <div class="message-content">${messageContent}</div>
             <div class="message-time">
                 <small>${formatTime(message.timestamp)}</small>
                 ${manualIcon}
@@ -541,7 +906,6 @@ function appendMessage(message) {
     
     messagesList.appendChild(messageDiv);
 }
-
 function sendManualResponse(event) {
     event.preventDefault();
     
@@ -552,6 +916,12 @@ function sendManualResponse(event) {
     
     const messageInput = document.getElementById('messageInput');
     const message = messageInput.value.trim();
+    
+    // Check if we have files to upload
+    if (selectedFiles.length > 0) {
+        uploadFiles();
+        return;
+    }
     
     if (!message) {
         showNotification('Please enter a message', 'warning');
@@ -593,7 +963,8 @@ function sendManualResponse(event) {
                 content: message,
                 role: 'assistant',
                 timestamp: new Date().toISOString(),
-                is_manual: true
+                is_manual: true,
+                message_type: 'text'
             };
             appendMessage(messageData);
             scrollMessagesToBottom();
@@ -612,7 +983,333 @@ function sendManualResponse(event) {
         setFormLoading(false);
     });
 }
-
+// Enhanced features implementation
+function initializeEmojiPicker() {
+    const emojiGrid = document.getElementById('emojiGrid');
+    const categories = document.querySelectorAll('.emoji-category-btn');
+    
+    // Load default category
+    loadEmojiCategory('smileys');
+    
+    // Add category listeners
+    categories.forEach(btn => {
+        btn.addEventListener('click', function() {
+            categories.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            loadEmojiCategory(this.dataset.category);
+        });
+    });
+}
+function loadEmojiCategory(category) {
+    const emojiGrid = document.getElementById('emojiGrid');
+    emojiGrid.innerHTML = '';
+    
+    emojiData[category].forEach(emoji => {
+        const emojiBtn = document.createElement('button');
+        emojiBtn.type = 'button';
+        emojiBtn.className = 'emoji-item';
+        emojiBtn.textContent = emoji;
+        emojiBtn.onclick = () => insertEmoji(emoji);
+        emojiGrid.appendChild(emojiBtn);
+    });
+}
+function toggleEmojiPicker() {
+    const emojiPicker = document.getElementById('emojiPicker');
+    const emojiBtn = document.getElementById('emojiBtn');
+    
+    if (emojiPicker.style.display === 'none' || !emojiPicker.style.display) {
+        emojiPicker.style.display = 'block';
+        emojiBtn.classList.add('active');
+    } else {
+        emojiPicker.style.display = 'none';
+        emojiBtn.classList.remove('active');
+    }
+}
+function insertEmoji(emoji) {
+    const messageInput = document.getElementById('messageInput');
+    const cursorPos = messageInput.selectionStart;
+    const textBefore = messageInput.value.substring(0, cursorPos);
+    const textAfter = messageInput.value.substring(cursorPos);
+    
+    messageInput.value = textBefore + emoji + textAfter;
+    messageInput.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+    messageInput.focus();
+    
+    // Hide emoji picker
+    document.getElementById('emojiPicker').style.display = 'none';
+    document.getElementById('emojiBtn').classList.remove('active');
+}
+function setupTextareaAutoResize() {
+    const messageInput = document.getElementById('messageInput');
+    
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+}
+function setupFileInput() {
+    const fileInput = document.getElementById('fileInput');
+    
+    fileInput.addEventListener('change', function(e) {
+        handleFileSelection(e.target.files);
+    });
+}
+function openFileDialog() {
+    document.getElementById('fileInput').click();
+}
+function handleFileSelection(files) {
+    selectedFiles = Array.from(files);
+    displayFilePreview();
+}
+function displayFilePreview() {
+    const filePreview = document.getElementById('filePreview');
+    const filePreviewList = document.getElementById('filePreviewList');
+    
+    if (selectedFiles.length === 0) {
+        filePreview.style.display = 'none';
+        return;
+    }
+    
+    filePreviewList.innerHTML = '';
+    
+    selectedFiles.forEach((file, index) => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-preview-item';
+        
+        const fileIcon = getFileIcon(file.type);
+        
+        fileItem.innerHTML = `
+            <div class="file-preview-icon">${fileIcon}</div>
+            <div class="file-preview-info">
+                <div class="file-preview-name">${file.name}</div>
+                <div class="file-preview-size">${formatFileSize(file.size)}</div>
+            </div>
+            <button type="button" class="file-preview-remove" onclick="removeFile(${index})">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        filePreviewList.appendChild(fileItem);
+    });
+    
+    filePreview.style.display = 'block';
+}
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    displayFilePreview();
+}
+function getFileIcon(fileType) {
+    if (fileType.startsWith('image/')) return '<i class="fas fa-image"></i>';
+    if (fileType.startsWith('audio/')) return '<i class="fas fa-music"></i>';
+    if (fileType.startsWith('video/')) return '<i class="fas fa-video"></i>';
+    if (fileType.includes('pdf')) return '<i class="fas fa-file-pdf"></i>';
+    if (fileType.includes('word')) return '<i class="fas fa-file-word"></i>';
+    return '<i class="fas fa-file"></i>';
+}
+function uploadFiles() {
+    if (selectedFiles.length === 0) return;
+    
+    const formData = new FormData();
+    
+    selectedFiles.forEach(file => {
+        formData.append('files[]', file);
+    });
+    
+    formData.append('conversation_id', currentConversationId);
+    formData.append('type', 'files');
+    
+    setFormLoading(true);
+    
+    fetch('/api/upload_files/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            selectedFiles = [];
+            displayFilePreview();
+            
+            // Clear text input
+            document.getElementById('messageInput').value = '';
+            
+            // Add file messages to chat
+            data.files.forEach(file => {
+                const messageData = {
+                    content: `Shared ${file.type.startsWith('image/') ? 'image' : 'file'}: ${file.name}`,
+                    role: 'assistant',
+                    timestamp: new Date().toISOString(),
+                    is_manual: true,
+                    message_type: file.type.startsWith('image/') ? 'image' : 'file',
+                    file_url: file.url,
+                    file_name: file.name,
+                    file_size: file.size
+                };
+                appendMessage(messageData);
+            });
+            
+            scrollMessagesToBottom();
+            showNotification('Files uploaded successfully', 'success');
+        } else {
+            showNotification('Error uploading files: ' + (data.error || 'Unknown error'), 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error uploading files:', error);
+        showNotification('Error uploading files', 'danger');
+    })
+    .finally(() => {
+        setFormLoading(false);
+    });
+}
+function toggleVoiceRecording() {
+    if (isRecording) {
+        stopVoiceRecording();
+    } else {
+        startVoiceRecording();
+    }
+}
+async function startVoiceRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        isRecording = true;
+        recordingStartTime = Date.now();
+        
+        // Update UI
+        const voiceBtn = document.getElementById('voiceBtn');
+        const voiceIcon = document.getElementById('voiceIcon');
+        voiceBtn.classList.add('recording');
+        voiceIcon.className = 'fas fa-stop';
+        
+        // Show recording timer
+        const recordingTimer = document.getElementById('recordingTimer');
+        recordingTimer.style.display = 'flex';
+        
+        // Start timer
+        updateRecordingTimer();
+        recordingTimer = setInterval(updateRecordingTimer, 1000);
+        
+        mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+        
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            await uploadAudio(audioBlob);
+            
+            // Clean up
+            stream.getTracks().forEach(track => track.stop());
+            resetRecordingUI();
+        };
+        
+        mediaRecorder.start();
+        
+    } catch (error) {
+        console.error('Error starting voice recording:', error);
+        showNotification('Unable to access microphone. Please check permissions.', 'danger');
+        resetRecordingUI();
+    }
+}
+function stopVoiceRecording() {
+    if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        clearInterval(recordingTimer);
+    }
+}
+function updateRecordingTimer() {
+    if (!recordingStartTime) return;
+    
+    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    
+    document.getElementById('recordingTime').textContent = 
+        `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+function resetRecordingUI() {
+    isRecording = false;
+    recordingStartTime = null;
+    
+    const voiceBtn = document.getElementById('voiceBtn');
+    const voiceIcon = document.getElementById('voiceIcon');
+    const recordingTimer = document.getElementById('recordingTimer');
+    
+    voiceBtn.classList.remove('recording');
+    voiceIcon.className = 'fas fa-microphone';
+    recordingTimer.style.display = 'none';
+}
+async function uploadAudio(audioBlob) {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'voice_message.wav');
+    formData.append('conversation_id', currentConversationId);
+    formData.append('type', 'audio');
+    
+    setFormLoading(true);
+    
+    try {
+        const response = await fetch('/api/upload_audio/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Add audio message to chat
+            const messageData = {
+                content: 'Voice message',
+                role: 'assistant',
+                timestamp: new Date().toISOString(),
+                is_manual: true,
+                message_type: 'audio',
+                file_url: data.file_url,
+                duration: data.duration
+            };
+            appendMessage(messageData);
+            scrollMessagesToBottom();
+            
+            showNotification('Voice message sent successfully', 'success');
+        } else {
+            showNotification('Error uploading voice message: ' + (data.error || 'Unknown error'), 'danger');
+        }
+    } catch (error) {
+        console.error('Error uploading audio:', error);
+        showNotification('Error uploading voice message', 'danger');
+    } finally {
+        setFormLoading(false);
+    }
+}
+function openImageModal(imageUrl) {
+    const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+    document.getElementById('modalImage').src = imageUrl;
+    modal.show();
+}
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+// Close emoji picker when clicking outside
+document.addEventListener('click', function(e) {
+    const emojiPicker = document.getElementById('emojiPicker');
+    const emojiBtn = document.getElementById('emojiBtn');
+    
+    if (!e.target.closest('.emoji-picker') && !e.target.closest('#emojiBtn')) {
+        emojiPicker.style.display = 'none';
+        emojiBtn.classList.remove('active');
+    }
+});
+// Rest of the existing functions (maintaining the same functionality)
 function addNewConversation(conversation) {
     const conversationsList = document.getElementById('conversationsList');
     const noConversationsMessage = document.getElementById('noConversationsMessage');
@@ -649,7 +1346,6 @@ function addNewConversation(conversation) {
     // Update counter
     updateActiveConversationsCounter();
 }
-
 function updateConversationMessage(conversationId, message) {
     const conversationItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
     if (!conversationItem) return;
@@ -658,7 +1354,17 @@ function updateConversationMessage(conversationId, message) {
     const messagePreview = conversationItem.querySelector('p.mb-1');
     if (messagePreview) {
         const roleLabel = message.role === 'user' ? 'Visitor' : 'Agent';
-        const preview = message.content.length > 50 ? message.content.substring(0, 50) + '...' : message.content;
+        let preview = message.content;
+        
+        if (message.message_type === 'audio') {
+            preview = 'Voice message';
+        } else if (message.message_type === 'file') {
+            preview = `File: ${message.file_name || 'Unknown'}`;
+        } else if (message.message_type === 'image') {
+            preview = 'Image';
+        }
+        
+        preview = preview.length > 50 ? preview.substring(0, 50) + '...' : preview;
         messagePreview.innerHTML = `<strong>${roleLabel}:</strong> ${escapeHtml(preview)}`;
     }
     
@@ -682,7 +1388,6 @@ function updateConversationMessage(conversationId, message) {
     const conversationsList = document.getElementById('conversationsList');
     conversationsList.insertBefore(conversationItem, conversationsList.firstChild);
 }
-
 function removeConversation(conversationId) {
     const conversationItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
     if (conversationItem) {
@@ -701,7 +1406,6 @@ function removeConversation(conversationId) {
         }
     }
 }
-
 function clearChatInterface() {
     currentConversationId = null;
     document.getElementById('currentConversationTitle').textContent = 'Select a conversation';
@@ -718,8 +1422,10 @@ function clearChatInterface() {
     // Disable message input
     document.getElementById('messageInput').disabled = true;
     document.getElementById('sendButton').disabled = true;
+    document.getElementById('emojiBtn').disabled = true;
+    document.getElementById('fileBtn').disabled = true;
+    document.getElementById('voiceBtn').disabled = true;
 }
-
 function updateChatInterface(conversationElement) {
     // Update title
     const websiteName = conversationElement.querySelector('h6').textContent;
@@ -734,7 +1440,6 @@ function updateChatInterface(conversationElement) {
         '<span class="badge bg-success">Active</span>';
     document.getElementById('conversationStatus').innerHTML = statusHtml;
 }
-
 function handleTypingIndicator(data) {
     const typingIndicator = document.getElementById('typingIndicator');
     
@@ -751,7 +1456,6 @@ function handleTypingIndicator(data) {
         typingIndicator.style.display = 'none';
     }
 }
-
 function endCurrentConversation() {
     if (!currentConversationId) {
         showNotification('Please select a conversation first', 'warning');
@@ -759,7 +1463,7 @@ function endCurrentConversation() {
     }
     
     if (confirm('Are you sure you want to end this conversation?')) {
-        fetch(`/chatbot/api/conversations/${currentConversationId}/end/`, {
+        fetch(`/api/conversations/${currentConversationId}/end/`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken'),
@@ -782,12 +1486,10 @@ function endCurrentConversation() {
         });
     }
 }
-
 function refreshConversations() {
     console.log('Refreshing conversations...');
     window.location.reload();
 }
-
 function updateActiveConversationsCounter() {
     const count = document.querySelectorAll('.conversation-item').length;
     const counter = document.getElementById('conversationsCount');
@@ -795,7 +1497,6 @@ function updateActiveConversationsCounter() {
         counter.textContent = count;
     }
 }
-
 function setFormLoading(isLoading) {
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
@@ -813,7 +1514,6 @@ function setFormLoading(isLoading) {
         sendButtonLoading.style.display = 'none';
     }
 }
-
 function updateConnectionStatus(connected) {
     const connectionIcon = document.getElementById('connectionIcon');
     
@@ -823,7 +1523,6 @@ function updateConnectionStatus(connected) {
         connectionIcon.className = 'fas fa-wifi text-danger me-2';
     }
 }
-
 function showConnectionToast(message, type) {
     const toast = document.getElementById('connectionToast');
     const messageEl = document.getElementById('connectionMessage');
@@ -849,7 +1548,6 @@ function showConnectionToast(message, type) {
     const bsToast = new bootstrap.Toast(toast);
     bsToast.show();
 }
-
 function showNotification(message, type = 'info') {
     const toast = document.getElementById('notificationToast');
     const messageEl = document.getElementById('notificationMessage');
@@ -859,7 +1557,6 @@ function showNotification(message, type = 'info') {
     const bsToast = new bootstrap.Toast(toast);
     bsToast.show();
 }
-
 function playNotificationSound() {
     try {
         // Create a simple notification sound
@@ -882,25 +1579,21 @@ function playNotificationSound() {
         console.log('Audio not available');
     }
 }
-
 function scrollMessagesToBottom() {
     const messagesContainer = document.getElementById('messagesContainer');
     if (messagesContainer) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 }
-
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
-
 function formatTime(timestamp) {
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 }
-
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -916,4 +1609,22 @@ function getCookie(name) {
     return cookieValue;
 }
 </script>
+<script>
+        window.ChatBotConfig = {
+            websiteId: '4300e854-9ec6-4d74-a411-be94beb77641',
+            apiUrl: 'http://172.20.10.2:5000',
+            botName: 'AMP Logistics',
+            theme: 'orange', // Now properly applies to ALL elements!
+            position: 'bottom-right',
+            // welcomeMessage: 'Welcome to our website! How can I help you find what you\'re looking for?',
+            enableSound: true,
+            showTypingIndicator: true,
+            showAvatar: true,
+            allowMinimize: true,
+            allowClose: true,
+            autoConnect: true,
+            collectUserInfo: true // Enable user info collection
+        };
+    </script>
+    <script src="http://172.20.10.2:5000/static/assets/js/chatbot-widget.js"></script>
 {% endblock %}

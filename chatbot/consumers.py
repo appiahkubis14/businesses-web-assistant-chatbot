@@ -275,21 +275,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             auto_response = "Thank you for your message. A support agent will respond to you shortly."
             
             # Save auto response
-            assistant_msg = await self.save_message(conversation, 'assistant', auto_response, {
-                'is_auto': True,
-                'auto_response_type': 'acknowledgment'
-            })
+            # assistant_msg = await self.save_message(conversation, 'assistant', auto_response, {
+            #     'is_auto': True,
+            #     'auto_response_type': 'acknowledgment'
+            # })
             
-            # Send auto response to visitor immediately
-            # await self.send(text_data=json.dumps({
-            #     'type': 'chat_message',
-            #     'message': auto_response,
-            #     'role': 'assistant',
-            #     'message_id': str(assistant_msg.id),
-            #     'conversation_id': str(conversation.id),
-            #     'timestamp': assistant_msg.timestamp.isoformat(),
-            #     'is_auto': True
-            # }))
             
             logger.info(f"Processed user message in conversation {self.conversation_id}")
             
@@ -549,7 +539,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'role': message.role,
                         'conversation_id': str(conversation.id),
                         'timestamp': message.timestamp.isoformat(),
-                        'metadata': message.metadata or {}
+                        # 'metadata': message.metadata or {}
                     },
                     'conversation_id': str(conversation.id),
                     'website_id': str(conversation.website.id)
@@ -570,7 +560,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                             'started_at': conversation.started_at.isoformat(),
                             'total_messages': conversation.total_messages,
                             'requires_attention': conversation.requires_attention,
-                            'metadata': conversation.metadata or {}
+                            # 'metadata': conversation.metadata or {}
                         },
                         'website_id': str(conversation.website.id)
                     }
@@ -588,6 +578,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             logger.error(f"Error validating conversation existence: {e}")
             return False
+
+
+
 
 class DashboardConsumer(AsyncWebsocketConsumer):
     """WebSocket consumer for dashboard real-time updates"""
